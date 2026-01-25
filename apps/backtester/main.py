@@ -1,0 +1,1 @@
+# This is the backtester module responsible for simulating trades based on historical data to evaluate strategy performance.

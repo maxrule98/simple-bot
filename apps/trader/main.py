@@ -1,0 +1,1 @@
+# This is the trader module responsible for live trading operations. Backtesting and live should share as much code as possible to ensure consistency between simulated and real trades.
