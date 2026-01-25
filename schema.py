@@ -203,6 +203,27 @@ CREATE_INDICATOR_CACHE_INDEXES = [
 ]
 
 # =============================================================================
+# TRACKING TABLES (Gap management)
+# =============================================================================
+
+CREATE_UNFILLABLE_GAPS_TABLE = """
+CREATE TABLE IF NOT EXISTS unfillable_gaps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exchange TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    timeframe TEXT NOT NULL,
+    gap_start INTEGER NOT NULL,
+    gap_end INTEGER NOT NULL,
+    detected_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    UNIQUE(exchange, symbol, timeframe, gap_start, gap_end)
+);
+"""
+
+CREATE_UNFILLABLE_GAPS_INDEXES = [
+    "CREATE INDEX IF NOT EXISTS idx_unfillable_gaps_lookup ON unfillable_gaps(exchange, symbol, timeframe);",
+]
+
+# =============================================================================
 # ALL TABLES AND INDEXES (Execution Order)
 # =============================================================================
 
@@ -219,16 +240,18 @@ ALL_TABLES = [
     
     # Computed data
     CREATE_INDICATOR_CACHE_TABLE,
+    CREATE_UNFILLABLE_GAPS_TABLE,
 ]
 
 ALL_INDEXES = (
-    OHLCV_INDEXES +
+    CREATE_OHLCV_INDEXES +
     CREATE_TICKER_INDEXES +
     CREATE_STRATEGY_INDEXES +
     CREATE_TRADES_INDEXES +
     CREATE_POSITIONS_INDEXES +
     CREATE_SIGNALS_INDEXES +
-    CREATE_INDICATOR_CACHE_INDEXES
+    CREATE_INDICATOR_CACHE_INDEXES +
+    CREATE_UNFILLABLE_GAPS_INDEXES
 )
 
 # =============================================================================

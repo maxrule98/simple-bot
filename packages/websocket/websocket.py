@@ -26,7 +26,11 @@ Note: WebSocket data and REST data are identical structure,
 import asyncio
 import ccxt.pro as ccxtpro
 from typing import Dict, List, Optional
+from pathlib import Path
 import time
+
+# Get project root (2 levels up from this file)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 class WebSocketManager:
@@ -219,7 +223,8 @@ async def example_usage():
     import sqlite3
     
     # Connect to database
-    conn = sqlite3.connect('data/trading.db')
+    db_path = PROJECT_ROOT / "data" / "trading.db"
+    conn = sqlite3.connect(str(db_path))
     
     # Initialize websocket manager
     ws_manager = WebSocketManager(
