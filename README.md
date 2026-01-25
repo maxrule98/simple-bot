@@ -1,6 +1,6 @@
-# Trading Bot - Modular Architecture
+# Trading Bot - Enterprise-Grade Architecture
 
-A cryptocurrency trading bot with a modular, extensible architecture. Scans multiple trading pairs using CCXT, stores data in SQLite, and generates trading signals based on configurable strategies.
+A professional cryptocurrency trading bot with a clean, enterprise-grade architecture. Features separate applications for live trading, backtesting, and data management, with a modular package system for indicators, exchanges, and execution logic.
 
 ## Features
 
@@ -11,399 +11,492 @@ A cryptocurrency trading bot with a modular, extensible architecture. Scans mult
 - ⚡ **UV package management** - Fast dependency management
 - 🧩 **Modular design** - Clean separation of concerns
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 simple-bot/
-├── main.py           # Entry point - orchestrates the bot
-├── config.py         # Configuration management
-├── database.py       # Database operations
-├── exchange.py       # Exchange interactions (CCXT)
-├── scanner.py        # Market scanning logic
-├── strategy.py       # Trading strategies
-├── data/             # SQLite database (auto-created)
-│   └── trading.db
-├── pyproject.toml    # Project dependencies
-└── README.md         # This file
+├── apps/                          # Standalone applications
+│   ├── trader/                    # Live trading application
+│   │   ├── main.py               # Entry point for live trading
+│   │   └── utils/                # Trading-specific utilities
+│   ├── backtester/               # Backtesting application
+│   │   ├── main.py               # Entry point for backtesting
+│   │   └── utils/                # Backtesting utilities
+│   └── backfiller/               # Historical data collection
+│       ├── main.py               # Entry point for data backfilling
+│       └── utils/                # Backfiller utilities
+│
+├── packages/                      # Reusable packages/modules
+│   ├── core/                     # Core trading bot logic
+│   │   └── main.py
+│   ├── exchange/                 # Exchange abstraction layer
+│   │   └── main.py               # Dynamic exchange switching
+│   ├── execution/                # Trade execution engine
+│   │   └── main.py               # Order placement and management
+│   ├── timeframes/               # Timeframe management
+│   │   └── main.py               # Dynamic timeframe switching
+│   └── indicators/               # Technical indicators
+│       ├── main.py               # Indicator index/registry
+│       ├── utils.py/             # Indicator utilities
+│       ├── conventional/         # Traditional indicators
+│       │   └── rsi/              # RSI indicator
+│       │       ├── main.py
+│       │       └── utils/
+│       └── ML/                   # Machine learning indicators
+│           └── ARIMA/            # ARIMA forecasting
+│               ├── main.py
+│               └── utils/
+│
+├── config/                        # Configuration management
+│   ├── config.py                 # Main configuration module
+│   └── strategies/               # Strategy configurations
+│       └── test.yaml             # Example strategy config
+│
+├── data/                          # Data storage (auto-created)
+│   └── trading.db                # SQLite database
+│
+├── pyproject.toml                # Dependencies and project metadata
+└── README.md                      # This file
 ```
 
-## Architecture
+## 🏗️ Architecture Overview
 
-### Core Modules
+### Applications (`apps/`)
 
-#### `config.py`
+The project uses a multi-application architecture where each app serves a specific purpose:
 
-Centralized configuration using dataclasses:
+#### **Trader** (`apps/trader/`)
 
-- `ExchangeConfig` - Exchange settings (name, API keys, rate limits)
-- `DatabaseConfig` - Database path configuration
-- `TradingConfig` - Trading pairs, thresholds, strategy parameters
-- `BotConfig` - Main configuration container
+- **Purpose**: Live trading operations with real money
+- **Responsibility**: Executes trades on live markets based on signals
+- **Shared Code**: Uses the same strategy logic as backtester for consistency
+- **Entry Point**: `apps/trader/main.py`
 
-#### `database.py`
+#### **Backtester** (`apps/backtester/`)
 
-Database operations:
+- **Purpose**: Simulate trades using historical data
+- **Responsibility**: Evaluate strategy performance before going live
+- **Shared Code**: Reuses strategy and execution logic from packages
+- **Entry Point**: `apps/backtester/main.py`
 
-- Connection management
-- Table initialization (pairs, prices, signals)
-- CRUD operations for market data and signals
-- Query helpers for strategy analysis
+#### **Backfiller** (`apps/backfiller/`)
 
-#### `exchange.py`
+- **Purpose**: Populate historical market data
+- **Responsibility**: Download and store historical OHLCV data for analysis
+- **Entry Point**: `apps/backfiller/main.py`
 
-Exchange interactions via CCXT:
+### Packages (`packages/`)
 
-- Multi-exchange support
-- Ticker data fetching
-- OHLCV data retrieval
-- Market discovery
-- Rate limiting
+Reusable, modular components shared across all applications:
 
-#### `strategy.py`
+#### **Core** (`packages/core/`)
 
-Trading strategy framework:
+- Central trading bot logic
+- Orchestrates other packages
+- Main coordination layer
 
-- `Strategy` - Base strategy class
-- `PriceChangeStrategy` - Momentum-based signals
-- `VolumeStrategy` - Volume spike detection
-- `MultiStrategy` - Combine multiple strategies
+#### **Exchange** (`packages/exchange/`)
 
-#### `scanner.py`
+- Exchange abstraction layer
+- Dynamic exchange switching based on configuration
+- Unified interface for all exchanges (via CCXT)
+- Supports Binance, Kraken, Coinbase, and 100+ others
 
-Main orchestration:
+#### **Execution** (`packages/execution/`)
 
-- Coordinates all modules
-- Manages scan lifecycle
-- Data collection and storage
-- Signal generation and display
+- Trade execution engine
+- Places orders based on signals
+- Manages order lifecycle
+- Handles order confirmation and tracking
 
-## Quick Start
+#### **Timeframes** (`packages/timeframes/`)
+
+- Dynamic timeframe management
+- Switch between 1m, 5m, 15m, 1h, 4h, 1d, etc.
+- Modular design for easy timeframe addition
+- Timeframe conversion utilities
+
+#### **Indicators** (`packages/indicators/`)
+
+- Indicator registry and management
+- Two categories:
+  - **Conventional** (`conventional/`): Traditional technical indicators
+    - RSI, MACD, Bollinger Bands, etc.
+  - **ML** (`ML/`): Machine learning-based indicators
+    - ARIMA forecasting, LSTM predictions, etc.
+- Each indicator in its own folder with utilities
+- Example structure:
+  - `packages/indicators/conventional/rsi/main.py`
+  - `packages/indicators/ML/ARIMA/main.py`
+
+### Configuration (`config/`)
+
+#### **Main Config** (`config/config.py`)
+
+- Central configuration module
+- Manages app settings and parameters
+- Environment-specific configurations
+
+#### **Strategy Configs** (`config/strategies/`)
+
+- YAML-based strategy definitions
+- Declarative strategy configuration
+- Easy strategy composition without code changes
+- Example: `test.yaml`
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.12+
+- [UV](https://github.com/astral-sh/uv) package manager
 
 ### Installation
 
 ```bash
+# Clone the repository
+cd simple-bot
+
+# Install dependencies
 uv sync
 ```
 
-### Run the Bot
+### Running the Applications
+
+#### Live Trading
 
 ```bash
-uv run python main.py
+uv run python apps/trader/main.py
 ```
 
-### Expected Output
-
-```
-============================================================
-Trading Bot - Market Scanner
-============================================================
-
-✓ Database initialized
-✓ Connected to Binance
-
-Monitoring 5 pairs:
-
-✓ BTC/USDT: $87831.53
-✓ ETH/USDT: $2884.45
-...
-
-✓ Fetched data for 5 pairs
-✓ Data saved to database
-
-Analyzing market data...
-  → Signal: BUY ETH/USDT @ $2884.45 - Change: +1.23%
-
-Recent signals (3):
-  [BUY] ETH/USDT @ $2884.45 - Change: +1.23% (2026-01-25 10:30:00)
-```
-
-## Configuration
-
-### Basic Configuration
-
-Edit `main.py` to customize settings:
-
-```python
-config = BotConfig(
-    exchange=ExchangeConfig(
-        name="binance",  # or "kraken", "coinbase", etc.
-        enable_rate_limit=True,
-        market_type="spot"
-    ),
-    trading=TradingConfig(
-        pairs=['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
-        price_change_threshold=1.0
-    )
-)
-```
-
-### Add API Keys (Optional)
-
-For private endpoints or trading:
-
-```python
-config = BotConfig(
-    exchange=ExchangeConfig(
-        name="binance",
-        api_key="YOUR_API_KEY",
-        secret="YOUR_SECRET"
-    )
-)
-```
-
-### Dynamic Pair Discovery
-
-Let the bot discover pairs automatically:
-
-```python
-config = BotConfig(
-    trading=TradingConfig(
-        pairs=[],  # Empty list triggers auto-discovery
-        quote_currency="USDT",
-        max_pairs=20  # Scan top 20 USDT pairs
-    )
-)
-```
-
-## Custom Strategies
-
-### Create a New Strategy
-
-```python
-from strategy import Strategy
-
-class MyStrategy(Strategy):
-    def __init__(self, db, my_param=10):
-        super().__init__(db, name="my_strategy")
-        self.my_param = my_param
-
-    def analyze(self, symbol, ticker_data):
-        # Your logic here
-        # Return signal dict or None
-
-        return {
-            'symbol': symbol,
-            'signal_type': 'BUY',
-            'price': ticker_data['close'],
-            'strategy': self.name,
-            'metadata': 'My reason'
-        }
-```
-
-### Use Multiple Strategies
-
-```python
-from strategy import MultiStrategy, PriceChangeStrategy, VolumeStrategy
-
-strategies = [
-    PriceChangeStrategy(scanner.db, threshold=1.0),
-    VolumeStrategy(scanner.db, volume_threshold=1.5)
-]
-
-multi = MultiStrategy(strategies)
-scanner.set_strategy(multi)
-```
-
-### Built-in Strategies
-
-#### PriceChangeStrategy
-
-Generates signals based on price momentum:
-
-- **BUY** when price increases > threshold%
-- **SELL** when price decreases > threshold%
-
-```python
-strategy = PriceChangeStrategy(db, threshold=1.5)
-```
-
-#### VolumeStrategy
-
-Detects volume spikes (placeholder - extend as needed):
-
-```python
-strategy = VolumeStrategy(db, volume_threshold=2.0)
-```
-
-## Extending the Bot
-
-### Add a New Exchange
-
-```python
-config = BotConfig(
-    exchange=ExchangeConfig(
-        name="kraken",  # or any CCXT-supported exchange
-        enable_rate_limit=True
-    )
-)
-```
-
-### Add Technical Indicators
+#### Backtesting
 
 ```bash
-uv add pandas ta-lib pandas-ta
+uv run python apps/backtester/main.py
 ```
 
-Then in your strategy:
-
-```python
-import pandas as pd
-from strategy import Strategy
-
-class RSIStrategy(Strategy):
-    def analyze(self, symbol, ticker_data):
-        # Fetch OHLCV data
-        # Calculate RSI
-        # Generate signals
-        pass
-```
-
-### Scheduled Scanning
-
-For continuous monitoring, use a scheduler:
+#### Data Backfilling
 
 ```bash
-uv add schedule
+uv run python apps/backfiller/main.py
 ```
 
-```python
-import schedule
-import time
+## ⚙️ Configuration
 
-def job():
-    scanner = MarketScanner(config)
-    scanner.initialize()
-    scanner.set_strategy(strategy)
-    scanner.scan()
-    scanner.cleanup()
+### Strategy Configuration (YAML)
 
-schedule.every(5).minutes.do(job)
+Define strategies declaratively using YAML files in `config/strategies/`:
 
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+```yaml
+# config/strategies/my_strategy.yaml
+strategy:
+  name: "my_custom_strategy"
+  timeframe: "1h"
+  pairs:
+    - "BTC/USDT"
+    - "ETH/USDT"
+  indicators:
+    - type: "RSI"
+      period: 14
+    - type: "MACD"
+      fast: 12
+      slow: 26
+  signals:
+    buy_threshold: 30
+    sell_threshold: 70
 ```
 
-## Database Schema
+### Main Configuration (`config/config.py`)
 
-### prices
+Central configuration for the entire application:
 
-- `symbol` - Trading pair (e.g., BTC/USDT)
-- `timestamp` - Data timestamp
-- `open, high, low, close, volume` - OHLCV data
-- `created_at` - Record creation time
+- Exchange credentials and settings
+- Database connections
+- API rate limits
+- Logging levels
+- Environment-specific settings
 
-### signals
+### Dynamic Exchange Switching
 
-- `symbol` - Trading pair
-- `signal_type` - BUY/SELL
-- `price` - Price at signal
-- `strategy` - Strategy name
-- `metadata` - Additional info
-- `timestamp` - Signal generation time
+The `packages/exchange/` module allows runtime exchange switching:
 
-## Adding Dependencies
+- Binance
+- Kraken
+- Coinbase
+- Bybit
+- And 100+ others via CCXT
+
+### Dynamic Timeframe Management
+
+The `packages/timeframes/` module provides flexible timeframe handling:
+
+- 1m, 5m, 15m, 30m
+- 1h, 2h, 4h, 6h, 12h
+- 1d, 3d, 1w, 1M
+- Custom timeframes
+
+## 📊 Indicators
+
+### Conventional Indicators (`packages/indicators/conventional/`)
+
+Traditional technical analysis indicators:
+
+- **RSI** (Relative Strength Index) - `conventional/rsi/`
+- **MACD** (Moving Average Convergence Divergence)
+- **Bollinger Bands**
+- **Moving Averages** (SMA, EMA)
+- **Stochastic Oscillator**
+- And more...
+
+Each indicator follows the structure:
+
+```
+packages/indicators/conventional/[indicator_name]/
+├── main.py      # Indicator implementation
+└── utils/       # Helper functions
+```
+
+### Machine Learning Indicators (`packages/indicators/ML/`)
+
+Advanced ML-based indicators and forecasting:
+
+- **ARIMA** (AutoRegressive Integrated Moving Average) - `ML/ARIMA/`
+- **LSTM** (Long Short-Term Memory networks)
+- **Random Forest** classifiers
+- **Gradient Boosting** models
+- **Neural Network** predictions
+
+Each ML indicator follows the structure:
+
+```
+packages/indicators/ML/[model_name]/
+├── main.py      # Model implementation
+└── utils/       # Training, evaluation utilities
+```
+
+### Adding New Indicators
+
+1. Create a new folder in `conventional/` or `ML/`
+2. Add `main.py` with indicator logic
+3. Add `utils/` folder for helper functions
+4. Register in `packages/indicators/main.py`
+
+## 🔄 Workflow
+
+### Development Workflow
+
+1. **Backfill Historical Data**
+
+   ```bash
+   uv run python apps/backfiller/main.py
+   ```
+
+   Populate database with historical OHLCV data
+
+2. **Backtest Strategies**
+
+   ```bash
+   uv run python apps/backtester/main.py
+   ```
+
+   Test strategies against historical data
+
+3. **Optimize and Refine**
+   - Adjust strategy parameters in `config/strategies/`
+   - Test different indicators
+   - Tune entry/exit conditions
+
+4. **Paper Trade**
+   - Test with live data but no real orders
+   - Verify strategy behavior in real-time
+
+5. **Go Live**
+   ```bash
+   uv run python apps/trader/main.py
+   ```
+   Execute real trades with real money
+
+### Consistency Between Backtesting and Live Trading
+
+The architecture ensures that backtesting and live trading share the same code:
+
+- Both use packages from `packages/`
+- Same strategy logic
+- Same execution engine
+- Same indicator calculations
+
+This eliminates discrepancies between simulated and real performance.
+
+## 🧪 Development
+
+### Adding Dependencies
 
 ```bash
-uv add pandas          # Data analysis
-uv add pandas-ta       # Technical indicators
-uv add python-dotenv   # Environment variables
-uv add schedule        # Task scheduling
-uv add requests        # Additional API calls
+# Production dependencies
+uv add pandas numpy ta-lib
+
+# Development dependencies
+uv add --dev pytest black ruff mypy
 ```
 
-## Environment Variables
-
-Create `.env` file:
+### Code Quality
 
 ```bash
-EXCHANGE_API_KEY=your_api_key
-EXCHANGE_SECRET=your_secret
-QUOTE_CURRENCY=USDT
-PRICE_THRESHOLD=1.5
+# Format code
+uv run black apps/ packages/ config/
+
+# Lint
+uv run ruff check apps/ packages/ config/
+
+# Type check
+uv run mypy apps/ packages/ config/
 ```
 
-Load in config:
+### Testing
 
 ```bash
-uv add python-dotenv
-```
-
-```python
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
-config = BotConfig(
-    exchange=ExchangeConfig(
-        api_key=os.getenv('EXCHANGE_API_KEY', ''),
-        secret=os.getenv('EXCHANGE_SECRET', '')
-    )
-)
-```
-
-## Safety & Best Practices
-
-⚠️ **Important Safety Guidelines:**
-
-- **Paper trading first** - Test thoroughly before using real funds
-- **Start small** - Use minimal amounts when going live
-- **Risk management** - Implement stop-losses and position sizing
-- **Monitor actively** - Don't leave bots unattended
-- **API security** - Never commit API keys, use environment variables
-- **Rate limits** - Always enable rate limiting to avoid bans
-- **Error handling** - Implement comprehensive error handling
-- **Logging** - Add detailed logging for debugging
-
-## Development
-
-### Run Tests (when implemented)
-
-```bash
+# Run tests
 uv run pytest
+
+# With coverage
+uv run pytest --cov=packages --cov=apps
 ```
 
-### Code Style
+## 🔧 Key Design Principles
 
-```bash
-uv add black ruff
-uv run black .
-uv run ruff check .
-```
+### Modularity
 
-### Type Checking
+- **Packages** are self-contained and reusable
+- Each indicator, exchange, and timeframe is independent
+- Easy to add new components without modifying existing code
 
-```bash
-uv add mypy
-uv run mypy *.py
-```
+### Separation of Concerns
 
-## Troubleshooting
+- **Apps** handle specific use cases (trading, backtesting, backfilling)
+- **Packages** provide reusable functionality
+- **Config** manages all settings declaratively
 
-### "No signals generated yet"
+### Consistency
 
-- Run the bot multiple times to build price history
-- Signals need at least 2 data points to detect changes
-- Lower the `price_change_threshold` for more sensitive detection
+- Backtester and Trader share the same codebase
+- What works in backtesting works in live trading
+- No surprises when going from simulation to production
 
-### Exchange Connection Errors
+### Scalability
 
-- Check your internet connection
-- Verify exchange name is correct
-- Some exchanges require API keys even for market data
-- Enable rate limiting to avoid bans
+- Add new indicators by creating folders
+- Support new exchanges through configuration
+- Define new strategies with YAML files
+
+### Maintainability
+
+- Clear folder structure
+- Each component has a single responsibility
+- Easy to locate and update specific functionality
+
+## 📦 Package Organization
+
+### Why This Structure?
+
+1. **`apps/`** - Separate applications keep concerns isolated
+   - Each app can be run independently
+   - Different entry points for different purposes
+   - Easy to deploy specific functionality
+
+2. **`packages/`** - Shared code prevents duplication
+   - Single source of truth for business logic
+   - Reusable across all applications
+   - Easier testing and maintenance
+
+3. **`config/`** - Configuration as code
+   - YAML for strategies (non-developers can edit)
+   - Python for complex configurations
+   - Separation of code and configuration
+
+## ⚠️ Safety & Best Practices
+
+**Critical Guidelines:**
+
+- **Test Thoroughly** - Always backtest before live trading
+- **Start Small** - Use minimal capital initially
+- **Paper Trade** - Test with live data but no real orders first
+- **Risk Management** - Implement stop-losses and position sizing
+- **Monitor Actively** - Never leave trading bots unattended
+- **Secure API Keys** - Use environment variables, never commit keys
+- **Enable Rate Limits** - Prevent exchange bans
+- **Comprehensive Logging** - Track all actions for debugging
+- **Error Handling** - Handle edge cases gracefully
+
+## 🐛 Troubleshooting
+
+### Import Errors
+
+- Ensure you're running from project root
+- Use `uv run python` not just `python`
+- Check that all folders have proper structure
+
+### Exchange Errors
+
+- Verify exchange name is spelled correctly
+- Enable rate limiting in configuration
+- Some exchanges require API keys for public data
+- Check exchange status (maintenance, downtime)
 
 ### Database Errors
 
 - Ensure `data/` directory is writable
-- Check disk space
-- Database file: `data/trading.db`
+- Check available disk space
+- Verify SQLite is properly installed
 
-## License
+### Backtest vs Live Discrepancies
+
+- Ensure both use same code from `packages/`
+- Check for lookahead bias in indicators
+- Verify slippage and fees are modeled
+- Confirm identical strategy parameters
+
+## 📚 Further Reading
+
+### Project Components
+
+- Review code in `packages/` to understand core functionality
+- Check `apps/` for application-specific logic
+- Examine `config/strategies/` for strategy examples
+
+### External Resources
+
+- [CCXT Documentation](https://docs.ccxt.com/) - Exchange integration
+- [UV Documentation](https://github.com/astral-sh/uv) - Package manager
+- [SQLite Documentation](https://www.sqlite.org/docs.html) - Database
+
+## 🤝 Contributing
+
+When adding new features:
+
+1. **Indicators** - Add to `packages/indicators/conventional/` or `packages/indicators/ML/`
+2. **Exchanges** - Extend `packages/exchange/main.py`
+3. **Strategies** - Create YAML in `config/strategies/`
+4. **Apps** - Add new application in `apps/` if needed
+5. Follow the existing folder structure
+6. Add utilities in respective `utils/` folders
+7. Update this README with new functionality
+
+## 📄 License
 
 MIT
 
-## Disclaimer
+## ⚖️ Disclaimer
 
-This software is for educational purposes only. Cryptocurrency trading carries significant risk. Never invest more than you can afford to lose. The developers are not responsible for any financial losses incurred through the use of this software.
+**Educational and Informational Purposes Only**
+
+This software is provided for educational and informational purposes only. Cryptocurrency trading carries substantial risk of loss. You should never invest money that you cannot afford to lose.
+
+The developers and contributors:
+
+- Make no guarantees about profitability
+- Are not responsible for any financial losses
+- Provide no warranty of any kind
+- Do not provide financial advice
+- Recommend consulting financial professionals
+
+**Use at your own risk.**
