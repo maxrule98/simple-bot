@@ -1,0 +1,44 @@
+# ETH/USDT on Binance - 15 minute timeframe (scalping)
+trading:
+  exchange: binance
+  symbol: ETH/USDT
+  timeframe: 15m
+
+strategy:
+  name: ETH_Scalping_15M
+  type: scalping
+
+  indicators:
+    - name: rsi
+      period: 7
+      overbought: 75
+      oversold: 25
+
+    - name: ema
+      period: 20
+
+    - name: bollinger_bands
+      period: 20
+      std_dev: 2
+
+  entry:
+    long:
+      - price < bb_lower
+      - rsi < 30
+    short:
+      - price > bb_upper
+      - rsi > 70
+
+  exit:
+    take_profit: 0.8 # Smaller targets for scalping
+    stop_loss: 0.4
+    trailing_stop: true
+
+risk:
+  position_size: 300
+  max_open_positions: 2
+  max_daily_loss: 600
+
+execution:
+  order_type: limit
+  slippage_tolerance: 0.05

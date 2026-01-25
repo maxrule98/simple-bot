@@ -1,0 +1,43 @@
+# BTC/USD on Coinbase - 1 hour timeframe
+trading:
+  exchange: coinbase
+  symbol: BTC/USD
+  timeframe: 1h
+
+strategy:
+  name: BTC_Coinbase_Trend
+  type: trend_following
+
+  indicators:
+    - name: ema
+      period: 50
+
+    - name: ema
+      period: 200
+
+    - name: rsi
+      period: 14
+
+  entry:
+    long:
+      - ema_50 > ema_200
+      - rsi > 50
+      - rsi < 70
+    short:
+      - ema_50 < ema_200
+      - rsi < 50
+      - rsi > 30
+
+  exit:
+    take_profit: 4.0
+    stop_loss: 2.0
+    trailing_stop: true
+
+risk:
+  position_size: 1000
+  max_open_positions: 1
+  max_daily_loss: 2000
+
+execution:
+  order_type: market
+  slippage_tolerance: 0.2

@@ -1,1 +1,49 @@
-# Test strategy
+# Example Strategy Configuration
+# This file defines all trading parameters dynamically - NO HARDCODING!
+
+# Trading Configuration
+trading:
+  exchange: binance # Dynamic: binance, coinbase, kraken, etc.
+  symbol: BTC/USDT # Dynamic: any pair supported by exchange
+  timeframe: 1h # Dynamic: 1m, 5m, 15m, 1h, 4h, 1d, etc.
+
+# Strategy Parameters
+strategy:
+  name: RSI_Mean_Reversion
+  type: momentum
+
+  # Indicator Configuration
+  indicators:
+    - name: rsi
+      period: 14
+      overbought: 70
+      oversold: 30
+
+    - name: ema
+      period: 50
+
+  # Entry Signals
+  entry:
+    long:
+      - rsi < 30
+      - price > ema_50
+    short:
+      - rsi > 70
+      - price < ema_50
+
+  # Exit Signals
+  exit:
+    take_profit: 2.5 # Percent
+    stop_loss: 1.5 # Percent
+    trailing_stop: true
+
+# Risk Management (can override .env defaults)
+risk:
+  position_size: 100 # USD per trade
+  max_open_positions: 3
+  max_daily_loss: 300 # USD
+
+# Execution
+execution:
+  order_type: limit # limit, market
+  slippage_tolerance: 0.1 # Percent

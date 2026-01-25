@@ -1,0 +1,42 @@
+# BTC/USDT on Binance - 1 hour timeframe
+trading:
+  exchange: binance
+  symbol: BTC/USDT
+  timeframe: 1h
+
+strategy:
+  name: BTC_Momentum_1H
+  type: momentum
+
+  indicators:
+    - name: rsi
+      period: 14
+      overbought: 70
+      oversold: 30
+
+    - name: macd
+      fast: 12
+      slow: 26
+      signal: 9
+
+  entry:
+    long:
+      - rsi < 35
+      - macd_cross_up
+    short:
+      - rsi > 65
+      - macd_cross_down
+
+  exit:
+    take_profit: 3.0
+    stop_loss: 1.5
+    trailing_stop: true
+
+risk:
+  position_size: 500
+  max_open_positions: 1
+  max_daily_loss: 1000
+
+execution:
+  order_type: limit
+  slippage_tolerance: 0.1

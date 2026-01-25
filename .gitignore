@@ -1,28 +1,64 @@
-# Python-generated files
+# Environment variables (NEVER COMMIT!)
+.env
+.env.local
+.env.*.local
+
+# Python
 __pycache__/
-*.py[oc]
-build/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
 dist/
-wheels/
-*.egg-info
+build/
+.venv/
+venv/
+ENV/
+env/
 
-# Virtual environments
-.venv
-
-# SQLite database files
-data/
-*.db
-*.db-journal
+# Database (sensitive trading data)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
 *.sqlite
 *.sqlite3
 
-# Environment variables
-.env
-.env.local
+# Logs (may contain sensitive info)
+logs/*.log
 
 # IDE
-.idea/
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# UV
+.uv/
+uv.lock
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Backups
+*.backup
+*.bak
 
 # macOS
 .DS_Store
+
+# OS
+Thumbs.db
+
+# Keep these empty directories with .gitkeep
+!data/.gitkeep
+!logs/.gitkeep

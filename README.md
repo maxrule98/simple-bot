@@ -1,15 +1,55 @@
 # Trading Bot - Enterprise-Grade Architecture
 
-A professional cryptocurrency trading bot with a clean, enterprise-grade architecture. Features separate applications for live trading, backtesting, and data management, with a modular package system for indicators, exchanges, and execution logic.
+A professional cryptocurrency trading bot with a clean, enterprise-grade architecture designed for **complete modularity and dynamic deployment**. Features separate applications for live trading, backtesting, and data management, with Docker-based orchestration for running multiple trading instances simultaneously.
 
-## Features
+## 🎯 Key Features
 
-- 📊 **Multi-pair monitoring** - Scan multiple trading pairs simultaneously
-- 💾 **SQLite database** - Persistent storage for price history and signals
-- 📈 **Pluggable strategies** - Easy-to-extend strategy framework
+- 🐳 **Docker-First Architecture** - Deploy multiple instances with different strategies
+- 📊 **Completely Dynamic** - Zero hardcoding: exchange, symbol, timeframe, strategy all configurable
+- 💾 **SQLite database** - Shared persistent storage across all instances
+- 📈 **YAML-based strategies** - Define strategies declaratively without code changes
 - 🔄 **CCXT integration** - Access to 100+ cryptocurrency exchanges
 - ⚡ **UV package management** - Fast dependency management
 - 🧩 **Modular design** - Clean separation of concerns
+- 🔀 **Horizontal scaling** - Run N trading instances in parallel
+
+## 🏗️ Architecture Philosophy
+
+### No Hardcoding - Complete Modularity
+
+This bot is designed from the ground up to be **completely dynamic**:
+
+- ❌ **NO** hardcoded exchanges in code
+- ❌ **NO** hardcoded trading pairs
+- ❌ **NO** hardcoded timeframes
+- ❌ **NO** hardcoded strategies
+
+Instead:
+
+- ✅ All trading parameters defined in `config/strategies/*.yaml`
+- ✅ Secrets (API keys) in `.env` (shared across instances)
+- ✅ Each Docker container runs with different strategy config
+- ✅ Easy to add new instances without code changes
+
+### Docker-Based Multi-Instance Deployment
+
+**Why Docker?**
+
+- Run multiple trading strategies simultaneously
+- Each container isolated with its own configuration
+- Easy horizontal scaling
+- Resource limits per instance
+- Shared database across all instances
+
+**Example Deployment:**
+
+```
+Container 1: BTC/USDT on Binance, 1h timeframe, RSI strategy
+Container 2: ETH/USDT on Binance, 15m timeframe, Scalping strategy
+Container 3: BTC/USD on Coinbase, 1h timeframe, Trend following
+Container 4: SOL/USDT on Kraken, 4h timeframe, Mean reversion
+... and so on
+```
 
 ## 📁 Project Structure
 
@@ -148,92 +188,221 @@ Reusable, modular components shared across all applications:
 
 ### Prerequisites
 
-- Python 3.12+
-- [UV](https://github.com/astral-sh/uv) package manager
+- Docker and Docker Compose
+- Python 3.12+ (for local development)
+- [UV](https://github.com/astral-sh/uv) package manager (for local development)
 
-### Installation
+### Setup
+
+1. **Clone and Configure**
+
+   ```bash
+   cd simple-bot
+
+   # Copy environment template
+   cp .env.example .env
+
+   # Edit .env and add your API keys
+   nano .env
+   ```
+
+2. **Create Strategy Configurations**
+
+   Strategy configs are in `config/strategies/*.yaml`. See examples:
+   - `btc_binance_1h.yaml` - BTC on Binance, 1-hour timeframe
+   - `eth_binance_15m.yaml` - ETH on Binance, 15-minute scalping
+   - `btc_coinbase_1h.yaml` - BTC on Coinbase, 1-hour trend following
+
+3. **Build Docker Image**
+
+   ```bash
+   docker-compose build
+   ```
+
+### Running with Docker (Recommended)
+
+#### Start All Trading Instances
 
 ```bash
-# Clone the repository
-cd simple-bot
+# Start all configured trading bots
+docker-compose up -d
 
+# View logs
+docker-compose logs -f
+
+# View specific bot logs
+docker-compose logs -f trader-btc-binance-1h
+```
+
+#### Start Specific Instances
+
+```bash
+# Only run BTC trader
+docker-compose up -d trader-btc-binance-1h
+
+# Run multiple specific traders
+docker-compose up -d trader-btc-binance-1h trader-eth-binance-15m
+```
+
+#### Backfill Historical Data
+
+```bash
+# Run backfiller to populate database
+docker-compose up backfiller
+
+# Check data
+docker exec -it backfiller ls -lh /app/data
+```
+
+#### Run Backtests
+
+```bash
+# Backtester is in 'testing' profile
+docker-compose --profile testing up backtester
+```
+
+### Running Locally (Development)
+
+```bash
 # Install dependencies
 uv sync
-```
 
-### Running the Applications
+# Run trader with specific strategy
+uv run python apps/trader/main.py --config config/strategies/btc_binance_1h.yaml
 
-#### Live Trading
-
-```bash
-uv run python apps/trader/main.py
-```
-
-#### Backtesting
-
-```bash
-uv run python apps/backtester/main.py
-```
-
-#### Data Backfilling
-
-```bash
+# Run backfiller
 uv run python apps/backfiller/main.py
+
+# Run backtester
+uv run python apps/backtester/main.py --config config/strategies/test.yaml
 ```
+
+### Adding New Trading Instances
+
+1. **Create Strategy Config**
+
+   ```bash
+   # Copy existing config
+   cp config/strategies/btc_binance_1h.yaml config/strategies/sol_kraken_4h.yaml
+
+   # Edit new config
+   nano config/strategies/sol_kraken_4h.yaml
+   ```
+
+   ```yaml
+   trading:
+     exchange: kraken
+     symbol: SOL/USDT
+     timeframe: 4h
+   # ... rest of strategy
+   ```
+
+2. **Add to docker-compose.yml**
+
+   ```yaml
+   trader-sol-kraken-4h:
+     build: .
+     container_name: trader-sol-kraken-4h
+     command: python apps/trader/main.py --config /app/config/strategies/sol_kraken_4h.yaml
+     volumes:
+       - ./data:/app/data
+       - ./logs:/app/logs
+       - ./config/strategies:/app/config/strategies:ro
+     env_file:
+       - .env
+     restart: unless-stopped
+   ```
+
+3. **Start New Instance**
+
+   ```bash
+   docker-compose up -d trader-sol-kraken-4h
+   ```
+
+**That's it!** No code changes needed.
 
 ## ⚙️ Configuration
 
-### Strategy Configuration (YAML)
+### Architecture: Secrets vs Trading Parameters
 
-Define strategies declaratively using YAML files in `config/strategies/`:
+**Clear Separation:**
+
+| Configuration Type     | Location                   | Purpose                               | Shared?                 |
+| ---------------------- | -------------------------- | ------------------------------------- | ----------------------- |
+| **Secrets** (API keys) | `.env`                     | Authentication credentials            | ✅ Yes - all containers |
+| **Trading Parameters** | `config/strategies/*.yaml` | Exchange, symbol, timeframe, strategy | ❌ No - per container   |
+
+### 1. Environment Variables (`.env`) - Secrets Only
+
+Contains **only** API credentials and system-wide settings. **Never** put trading parameters here.
+
+```bash
+# .env
+BINANCE_API_KEY=your_key
+BINANCE_API_SECRET=your_secret
+COINBASE_API_KEY=your_key
+COINBASE_API_SECRET=your_secret
+DATABASE_URL=sqlite:///data/trading.db
+LOG_LEVEL=INFO
+```
+
+### 2. Strategy Configuration (YAML) - Trading Parameters
+
+Each strategy config defines **all** trading parameters dynamically:
 
 ```yaml
 # config/strategies/my_strategy.yaml
+trading:
+  exchange: binance # Dynamic - change per instance
+  symbol: BTC/USDT # Dynamic - any pair
+  timeframe: 1h # Dynamic - any timeframe
+
 strategy:
-  name: "my_custom_strategy"
-  timeframe: "1h"
-  pairs:
-    - "BTC/USDT"
-    - "ETH/USDT"
+  name: "RSI_Strategy"
   indicators:
-    - type: "RSI"
+    - name: rsi
       period: 14
-    - type: "MACD"
-      fast: 12
-      slow: 26
-  signals:
-    buy_threshold: 30
-    sell_threshold: 70
+      overbought: 70
+      oversold: 30
+
+  entry:
+    long:
+      - rsi < 30
+    short:
+      - rsi > 70
+
+  exit:
+    take_profit: 2.5
+    stop_loss: 1.5
+
+risk:
+  position_size: 100
+  max_open_positions: 3
 ```
 
-### Main Configuration (`config/config.py`)
+### 3. Supported Exchanges
 
-Central configuration for the entire application:
+All exchanges supported by [CCXT](https://github.com/ccxt/ccxt) - 100+ exchanges:
 
-- Exchange credentials and settings
-- Database connections
-- API rate limits
-- Logging levels
-- Environment-specific settings
-
-### Dynamic Exchange Switching
-
-The `packages/exchange/` module allows runtime exchange switching:
-
-- Binance
+- Binance, Binance US
+- Coinbase, Coinbase Pro
 - Kraken
-- Coinbase
 - Bybit
-- And 100+ others via CCXT
+- OKX
+- Bitfinex
+- And many more...
 
-### Dynamic Timeframe Management
+Just change `exchange: binance` to `exchange: kraken` in your strategy YAML.
 
-The `packages/timeframes/` module provides flexible timeframe handling:
+### 4. Supported Timeframes
 
-- 1m, 5m, 15m, 30m
-- 1h, 2h, 4h, 6h, 12h
-- 1d, 3d, 1w, 1M
-- Custom timeframes
+- **Minutes**: 1m, 5m, 15m, 30m
+- **Hours**: 1h, 2h, 4h, 6h, 12h
+- **Days**: 1d, 3d
+- **Weeks**: 1w
+- **Months**: 1M
+
+Just change `timeframe: 1h` to `timeframe: 15m` in your strategy YAML.
 
 ## 📊 Indicators
 
@@ -250,84 +419,170 @@ Traditional technical analysis indicators:
 
 Each indicator follows the structure:
 
-```
+````
 packages/indicators/conventional/[indicator_name]/
-├── main.py      # Indicator implementation
-└── utils/       # Helper functions
+├── maDeployment Workflow
+
+### 1. Development & Testing
+
+```bash
+# Local development
+uv sync
+uv run python apps/backfiller/main.py
+uv run python apps/backtester/main.py --config config/strategies/test.yaml
+````
+
+### 2. Create Strategy
+
+```bash
+# Copy template
+cp config/strategies/test.yaml config/strategies/my_new_strategy.yaml
+
+# Edit parameters
+nano config/strategies/my_new_strategy.yaml
 ```
 
-### Machine Learning Indicators (`packages/indicators/ML/`)
+### 3. Backtest Strategy
 
-Advanced ML-based indicators and forecasting:
+```bash
+# Test locally
+uv run python apps/backtester/main.py --config config/strategies/my_new_strategy.yaml
 
-- **ARIMA** (AutoRegressive Integrated Moving Average) - `ML/ARIMA/`
-- **LSTM** (Long Short-Term Memory networks)
-- **Random Forest** classifiers
-- **Gradient Boosting** models
-- **Neural Network** predictions
-
-Each ML indicator follows the structure:
-
-```
-packages/indicators/ML/[model_name]/
-├── main.py      # Model implementation
-└── utils/       # Training, evaluation utilities
+# Or with Docker
+docker-compose --profile testing up backtester
 ```
 
-### Adding New Indicators
+### 4. Deploy to Production
 
-1. Create a new folder in `conventional/` or `ML/`
-2. Add `main.py` with indicator logic
-3. Add `utils/` folder for helper functions
-4. Register in `packages/indicators/main.py`
+```bash
+# Add to docker-compose.yml
+nano docker-compose.yml
 
-## 🔄 Workflow
+# Start new instance
+docker-compose up -d trader-my-new-strategy
 
-### Development Workflow
+# Monitor
+docker-compose logs -f trader-my-new-strategy
+```
 
-1. **Backfill Historical Data**
+### 5. Scale Horizontally
 
-   ```bash
-   uv run python apps/backfiller/main.py
-   ```
+```bash
+# Add more strategies in docker-compose.yml
+# Each container runs independently with shared database
 
-   Populate database with historical OHLCV data
+docker-compose up -d  # Start all instances
+```
 
-2. **Backtest Strategies**
+## 🐳 Docker Commands Cheat Sheet
 
-   ```bash
-   uv run python apps/backtester/main.py
-   ```
+````bash
+# Build
+docker-compose build
 
-   Test strategies against historical data
+# Start all
+docker-compose up -d
 
-3. **Optimize and Refine**
-   - Adjust strategy parameters in `config/strategies/`
-   - Test different indicators
-   - Tune entry/exit conditions
+# Start specific
+docker-compose up -d trader-btc-binance-1h
 
-4. **Paper Trade**
-   - Test with live data but no real orders
-   - Verify strategy behavior in real-time
+# Stop all
+docker-compose down
 
-5. **Go Live**
-   ```bash
-   uv run python apps/trader/main.py
-   ```
-   Execute real trades with real money
+# Stop specific
+docker-compose stop trader-btc-binance-1h
 
-### Consistency Between Backtesting and Live Trading
+# View logs (all)
+docker-compose logs -f
 
-The architecture ensures that backtesting and live trading share the same code:
+# View logs (specific)
+docker-compose logs -f trader-btc-binance-1h
 
-- Both use packages from `packages/`
-- Same strategy logic
-- Same execution engine
-- Same indicator calculations
+# Restart
+docker-compose restart trader-btc-binance-1h
 
-This eliminates discrepancies between simulated and real performance.
+# View running containers
+docker-compose ps
 
-## 🧪 Development
+# Ex1. Zero Hardcoding
+
+**Problem**: Traditional bots hardcode exchange/symbol/timeframe in code
+**Solution**: Everything in YAML configs
+
+```yaml
+# Want to trade ETH instead of BTC? Just edit YAML
+trading:
+  symbol: ETH/USDT  # Was: BTC/USDT
+````
+
+### 2. Docker-First Deployment
+
+**Problem**: Running multiple strategies means multiple processes to manage  
+**Solution**: Docker containers with shared database
+
+```bash
+# Each strategy runs in isolated container
+docker-compose up -d  # Starts all strategies
+```
+
+### 3. Horizontal Scalability
+
+**Problem**: Can't easily add more strategies  
+**Solution**: Add config + docker-compose entry = new instance
+
+```yaml
+# Add to docker-compose.yml - no code changes
+trader-new-strategy:
+  command: python apps/trader/main.py --config /app/config/strategies/new.yaml
+```
+
+### 4. Separation of Concerns
+
+- **Apps** (`apps/`) - Specific use cases (trader, backtester, backfiller)
+- **Packages** (`packages/`) - Reusable logic (indicators, execution, exchange)
+- **Config** (`config/`) - All parameters (YAML files)
+- **Secrets** (`.env`) - API credentials only
+
+### 5. Shared Database
+
+All containers share same SQLite database:
+
+- Single source of truth for historical data
+- Backfiller populates data once
+- All traders read from same database
+- No data duplication
+
+### 6. Consistency
+
+Backtester and Trader share exact same code:
+
+- Same indicators from `packages/indicators/`
+- Same execution logic from `packages/execution/`
+- Same exchange wrapper from `packages/exchange/`
+- ⚠️ **Test Thoroughly** - Always backtest before live trading
+- 💰 **Start Small** - Use minimal capital initially
+- 📄 **Paper Trade** - Test with live data but no real orders first
+- 🛡️ **Risk Management** - Implement stop-losses and position sizing
+- 👀 **Monitor Actively** - Check logs: `docker-compose logs -f`
+- 🔐 **Secure API Keys** - Never commit `.env` to git
+- ⏱️ **Enable Rate Limits** - Prevent exchange bans
+- 📊 **Comprehensive Logging** - All containers log to `./logs/`
+- 🚨 **Error Handling** - Containers auto-restart on failure
+- 💾 **Backup Database** - Regular backups of `./data/trading.db`
+
+### Resource Management
+
+Each container has resource limits in `docker-compose.yml`:
+
+```yaml
+deploy:
+  resources:
+    limits:
+      cpus: "0.5" # Max CPU usage
+      memory: 512M # Max memory
+```
+
+Adjust based on your server capacity.
 
 ### Adding Dependencies
 
@@ -341,34 +596,61 @@ uv add --dev pytest black ruff mypy
 
 ### Code Quality
 
-```bash
+````bash
 # Format code
 uv run black apps/ packages/ config/
 
-# Lint
-uv run ruff check apps/ packages/ config/
-
-# Type check
-uv run mypy apps/ packages/ config/
-```
-
-### Testing
+# LiDocker Issues
 
 ```bash
-# Run tests
-uv run pytest
+# Container won't start
+docker-compose logs trader-btc-binance-1h
 
-# With coverage
-uv run pytest --cov=packages --cov=apps
+# Check container status
+docker-compose ps
+
+# Rebuild image
+docker-compose build --no-cache
+
+# Remove all and restart
+docker-compose down -v
+docker-compose up -d
+````
+
+### Database Issues
+
+```bash
+# Check database exists
+ls -lh data/trading.db
+
+# Database locked
+# Stop all containers first
+docker-compose down
+docker-compose up -d
 ```
 
-## 🔧 Key Design Principles
+### Exchange Errors
 
-### Modularity
+- Verify API keys in `.env`
+- Check exchange name matches CCXT: [supported exchanges](https://github.com/ccxt/ccxt#supported-cryptocurrency-exchange-markets)
+- Enable rate limiting in strategy YAML
+- Some exchanges require API keys even for public data
 
-- **Packages** are self-contained and reusable
-- Each indicator, exchange, and timeframe is independent
-- Easy to add new components without modifying existing code
+### Strategy Config Errors
+
+```bash
+# Validate YAML syntax
+python -c "import yaml; yaml.safe_load(open('config/strategies/test.yaml'))"
+
+# Check file is mounted in container
+docker-compose exec trader-btc-binance-1h ls /app/config/strategies/
+```
+
+### Multiple Instances Not Working
+
+- Check each uses different `container_name` in docker-compose.yml
+- Ensure strategy configs have different filenames
+- Verify all share same database volume: `./data:/app/data`
 
 ### Separation of Concerns
 
