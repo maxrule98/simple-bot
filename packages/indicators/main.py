@@ -1,1 +1,0 @@
-# This is the index file for all indicators used in the trading bot application. Indicators will live in their own folders and files and be imported here for easy access throughout the application.
