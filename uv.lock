@@ -743,7 +743,10 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "ccxt", specifier = ">=4.4.42" }]
+requires-dist = [
+    { name = "ccxt", specifier = ">=4.4.42" },
+    { name = "ccxt", extras = ["pro"], specifier = ">=4.4.42" },
+]
 
 [[package]]
 name = "typing-extensions"

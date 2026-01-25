@@ -1,5 +1,34 @@
 # Quick Reference Guide
 
+## Initial Setup
+
+### 1. Initialize Database
+
+```bash
+# Create database with proper schema
+python schema.py
+
+# Or manually:
+mkdir -p data
+sqlite3 data/trading.db < schema.sql
+```
+
+### 2. Configure Environment
+
+```bash
+# Copy template
+cp .env.example .env
+
+# Edit with your API keys
+nano .env
+```
+
+### 3. Build Docker Images
+
+```bash
+docker-compose build
+```
+
 ## Common Commands
 
 ### Docker Operations
@@ -25,6 +54,24 @@ docker-compose ps
 
 # Rebuild images
 docker-compose build --no-cache
+```
+
+### Database Operations
+
+```bash
+# Initialize/reset database
+python schema.py
+
+# Backup database
+cp data/trading.db data/backup/trading_$(date +%Y%m%d).db
+
+# Check database size
+ls -lh data/trading.db
+
+# Query database
+sqlite3 data/trading.db "SELECT * FROM strategy_metadata;"
+sqlite3 data/trading.db "SELECT COUNT(*) FROM ohlcv_data;"
+sqlite3 data/trading.db "SELECT strategy_id, COUNT(*) FROM trades GROUP BY strategy_id;"
 ```
 
 ### Adding New Trading Instance

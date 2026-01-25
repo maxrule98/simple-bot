@@ -8,6 +8,11 @@ dependencies = [
     "ccxt>=4.4.42",
 ]
 
+[project.optional-dependencies]
+websocket = [
+    "ccxt[pro]>=4.4.42",  # WebSocket support for real-time data
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

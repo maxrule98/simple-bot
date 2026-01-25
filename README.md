@@ -71,6 +71,8 @@ simple-bot/
 │   │   └── main.py
 │   ├── exchange/                 # Exchange abstraction layer
 │   │   └── main.py               # Dynamic exchange switching
+│   ├── websocket/                # Real-time data streaming (CCXT Pro)
+│   │   └── websocket.py          # WebSocket manager for live data
 │   ├── execution/                # Trade execution engine
 │   │   └── main.py               # Order placement and management
 │   ├── timeframes/               # Timeframe management
@@ -108,6 +110,7 @@ The project uses a multi-application architecture where each app serves a specif
 #### **Trader** (`apps/trader/`)
 
 - **Purpose**: Live trading operations with real money
+- **Data Source**: WebSocket streams (real-time) + REST API (historical warmup)
 - **Responsibility**: Executes trades on live markets based on signals
 - **Shared Code**: Uses the same strategy logic as backtester for consistency
 - **Entry Point**: `apps/trader/main.py`
@@ -115,6 +118,7 @@ The project uses a multi-application architecture where each app serves a specif
 #### **Backtester** (`apps/backtester/`)
 
 - **Purpose**: Simulate trades using historical data
+- **Data Source**: REST API (historical data from database)
 - **Responsibility**: Evaluate strategy performance before going live
 - **Shared Code**: Reuses strategy and execution logic from packages
 - **Entry Point**: `apps/backtester/main.py`
@@ -137,10 +141,17 @@ Reusable, modular components shared across all applications:
 
 #### **Exchange** (`packages/exchange/`)
 
-- Exchange abstraction layer
+- Exchange abstraction layer (REST API)
 - Dynamic exchange switching based on configuration
 - Unified interface for all exchanges (via CCXT)
 - Supports Binance, Kraken, Coinbase, and 100+ others
+
+#### **WebSocket** (`packages/websocket/`)
+
+- Real-time market data streaming (CCXT Pro)
+- Used by live trader for sub-second updates
+- Streams OHLCV, ticker, trades, and order book data
+- Stores in same database tables as REST data
 
 #### **Execution** (`packages/execution/`)
 
@@ -737,13 +748,54 @@ docker-compose exec trader-btc-binance-1h ls /app/config/strategies/
 - Verify slippage and fees are modeled
 - Confirm identical strategy parameters
 
-## 📚 Further Reading
+## 📚 Documentation
 
-### Project Components
+### Project Documentation
 
-- Review code in `packages/` to understand core functionality
+- **[README.md](README.md)** - This file: Overview and quick start
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Visual architecture diagrams and design philosophy
+- **[DATABASE.md](DATABASE.md)** - Complete database schema and storage strategy
+- **[DATA_STRATEGY.md](DATA_STRATEGY.md)** - Visual guide to multi-instance data storage
+- **[WEBSOCKET.md](WEBSOCKET.md)** - WebSocket integration for real-time live trading data
+- **[QUICKSTART.md](QUICKSTART.md)** - Quick reference for common commands
+- **[CHANGES.md](CHANGES.md)** - Summary of architectural changes
+
+### Understanding Data Storage
+
+**Key Question**: How do we store multiple exchanges, symbols, timeframes efficiently?
+
+**Answer**: See **[DATABASE.md](DATABASE.md)** and **[DATA_STRATEGY.md](DATA_STRATEGY.md)**
+
+**TL;DR**:
+
+- ✅ One SQLite database with smart schema
+- ✅ Market data (OHLCV) shared across all strategies
+- ✅ Trade data isolated per strategy (by `strategy_id`)
+- ✅ Composite key partitioning: `(exchange, symbol, timeframe)`
+- ✅ WAL mode for concurrent access
+- ✅ No data duplication, no write conflicts
+- ✅ **Works for both REST API (historical) and WebSocket (real-time) data**
+
+### Real-Time Data with WebSockets
+
+**Key Question**: How do we handle live WebSocket data for real-time trading?
+
+**Answer**: See **[WEBSOCKET.md](WEBSOCKET.md)**
+
+**TL;DR**:
+
+- ✅ Uses CCXT Pro for WebSocket streams
+- ✅ Stores in **same database tables** as REST data
+- ✅ `INSERT OR REPLACE` updates current forming candles
+- ✅ Live trader: WebSocket for real-time + REST for historical warmup
+- ✅ Seamless transition: strategy doesn't care about data source
+
+### Code Structure
+
+- Review `packages/` for core functionality
 - Check `apps/` for application-specific logic
 - Examine `config/strategies/` for strategy examples
+- Run `python schema.py` to initialize database
 
 ### External Resources
 
