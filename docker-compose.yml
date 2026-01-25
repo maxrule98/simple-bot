@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  # Example: BTC/USDT trading on Binance with 1h timeframe
-  trader-btc-binance-1h:
+  # Example: BTC/USDT trading on MEXC with 1h timeframe
+  trader-btc-usdt-mexc-1h:
     build: .
-    container_name: trader-btc-binance-1h
-    command: python apps/trader/main.py --config /app/config/strategies/btc_binance_1h.yaml
+    container_name: trader-btc-usdt-mexc-1h
+    command: python apps/trader/main.py --config /app/config/strategies/btc_usdt_mexc_1h.yaml
     volumes:
       - ./data:/app/data              # Shared database
       - ./logs:/app/logs              # Shared logs
@@ -19,11 +19,11 @@ services:
           cpus: '0.5'
           memory: 512M
 
-  # Example: ETH/USDT trading on Binance with 15m timeframe
-  trader-eth-binance-15m:
+  # Example: BTC/USDT trading on MEXC with 4h timeframe
+  trader-btc-usdt-mexc-4h:
     build: .
-    container_name: trader-eth-binance-15m
-    command: python apps/trader/main.py --config /app/config/strategies/eth_binance_15m.yaml
+    container_name: trader-btc-usdt-mexc-4h
+    command: python apps/trader/main.py --config /app/config/strategies/btc_usdt_mexc_4h.yaml
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -37,11 +37,29 @@ services:
           cpus: '0.5'
           memory: 512M
 
-  # Example: BTC/USD trading on Coinbase with 1h timeframe
-  trader-btc-coinbase-1h:
+  # Example: BTC/USDT trading on MEXC with 1m timeframe (high-frequency)
+  trader-btc-usdt-mexc-1m:
     build: .
-    container_name: trader-btc-coinbase-1h
-    command: python apps/trader/main.py --config /app/config/strategies/btc_coinbase_1h.yaml
+    container_name: trader-btc-usdt-mexc-1m
+    command: python apps/trader/main.py --config /app/config/strategies/btc_usdt_mexc_1m.yaml
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config/strategies:/app/config/strategies:ro
+    env_file:
+      - .env
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Example: ETH/USDT trading on MEXC with 15m timeframe
+  trader-eth-usdt-mexc-15m:
+    build: .
+    container_name: trader-eth-usdt-mexc-15m
+    command: python apps/trader/main.py --config /app/config/strategies/eth_usdt_mexc_15m.yaml
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs

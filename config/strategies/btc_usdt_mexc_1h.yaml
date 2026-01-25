@@ -1,6 +1,6 @@
-# BTC/USDT on Binance - 1 hour timeframe
+# BTC/USDT on MEXC - 1 hour timeframe
 trading:
-  exchange: binance
+  exchange: mexc
   symbol: BTC/USDT
   timeframe: 1h
 

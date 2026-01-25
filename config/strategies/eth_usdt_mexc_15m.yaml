@@ -1,6 +1,6 @@
-# ETH/USDT on Binance - 15 minute timeframe (scalping)
+# ETH/USDT on MEXC - 15 minute timeframe (scalping)
 trading:
-  exchange: binance
+  exchange: mexc
   symbol: ETH/USDT
   timeframe: 15m
 
