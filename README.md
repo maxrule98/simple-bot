@@ -752,19 +752,22 @@ docker-compose exec trader-btc-binance-1h ls /app/config/strategies/
 
 ### Project Documentation
 
-- **[README.md](README.md)** - This file: Overview and quick start
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Visual architecture diagrams and design philosophy
-- **[DATABASE.md](DATABASE.md)** - Complete database schema and storage strategy
-- **[DATA_STRATEGY.md](DATA_STRATEGY.md)** - Visual guide to multi-instance data storage
-- **[WEBSOCKET.md](WEBSOCKET.md)** - WebSocket integration for real-time live trading data
-- **[QUICKSTART.md](QUICKSTART.md)** - Quick reference for common commands
-- **[CHANGES.md](CHANGES.md)** - Summary of architectural changes
+All comprehensive documentation is located in the [docs/](docs/) folder:
+
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Visual architecture diagrams and design philosophy
+- **[docs/DATABASE.md](docs/DATABASE.md)** - Complete database schema and storage strategy
+- **[docs/DATA_STRATEGY.md](docs/DATA_STRATEGY.md)** - Visual guide to multi-instance data storage
+- **[docs/DATA_FLOW.md](docs/DATA_FLOW.md)** - REST vs WebSocket data flow comparison
+- **[docs/DATA_SUMMARY.md](docs/DATA_SUMMARY.md)** - Data architecture best practices summary
+- **[docs/WEBSOCKET.md](docs/WEBSOCKET.md)** - WebSocket integration for real-time live trading data
+- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** - Quick reference for common commands
+- **[docs/AUDIT.md](docs/AUDIT.md)** - Pre-implementation audit and architecture review
 
 ### Understanding Data Storage
 
 **Key Question**: How do we store multiple exchanges, symbols, timeframes efficiently?
 
-**Answer**: See **[DATABASE.md](DATABASE.md)** and **[DATA_STRATEGY.md](DATA_STRATEGY.md)**
+**Answer**: See **[docs/DATABASE.md](docs/DATABASE.md)** and **[docs/DATA_STRATEGY.md](docs/DATA_STRATEGY.md)**
 
 **TL;DR**:
 
@@ -780,7 +783,7 @@ docker-compose exec trader-btc-binance-1h ls /app/config/strategies/
 
 **Key Question**: How do we handle live WebSocket data for real-time trading?
 
-**Answer**: See **[WEBSOCKET.md](WEBSOCKET.md)**
+**Answer**: See **[docs/WEBSOCKET.md](docs/WEBSOCKET.md)**
 
 **TL;DR**:
 

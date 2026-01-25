@@ -35,7 +35,6 @@ logs/
 .gitattributes
 
 # Documentation
-README.md
 docs/
 
 # Tests
