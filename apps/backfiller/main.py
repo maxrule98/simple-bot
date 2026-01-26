@@ -7,10 +7,11 @@ Supports multiple exchanges, symbols, and timeframes dynamically.
 
 import os
 import argparse
+import asyncio
 from datetime import datetime, timedelta
 from time import sleep
 from pathlib import Path
-import ccxt
+import ccxt.pro as ccxt
 
 from packages.database.db import DatabaseManager
 from packages.logging.logger import setup_logger
@@ -69,7 +70,7 @@ class Backfiller:
             logger.error(f"Failed to initialize {exchange_name}: {e}")
             raise
     
-    def backfill(self, symbol: str, timeframe: str, days: int = None):
+    async def backfill(self, symbol: str, timeframe: str, days: int = None):
         """
         Intelligent backfiller that automatically:
         1. Fills forward from latest timestamp (get updates)
@@ -108,7 +109,7 @@ class Backfiller:
             since_ts = int((datetime.now() - timedelta(days=days)).timestamp() * 1000)
             target_start = max(since_ts, earliest_ts) if earliest_ts else since_ts
             logger.info(f"=== Phase 1: Fetching backward from now (last {days} days) ===")
-            inserted = self._fetch_range(symbol, timeframe, tf_ms, target_start, now)
+            inserted = await self._fetch_range(symbol, timeframe, tf_ms, target_start, now)
             total_inserted += inserted
             logger.info(f"Phase 1 complete: {inserted} new candles")
         elif earliest_ts:
@@ -116,14 +117,14 @@ class Backfiller:
             # This will pick up new candles at the top, then stop when hitting existing data
             logger.info(f"=== Phase 1: Fetching backward from now to {datetime.fromtimestamp(earliest_ts/1000)} ===")
             target_start = earliest_ts - (tf_ms * 10)  # Stop just before our existing data
-            inserted = self._fetch_range(symbol, timeframe, tf_ms, target_start, now)
+            inserted = await self._fetch_range(symbol, timeframe, tf_ms, target_start, now)
             total_inserted += inserted
             logger.info(f"Phase 1 complete: {inserted} new candles")
         else:
             # No data at all - fetch everything from now back to 2017
             logger.info(f"=== Phase 1: Fetching all available history from now ===")
             target_start = int(datetime(2017, 1, 1).timestamp() * 1000)
-            inserted = self._fetch_range(symbol, timeframe, tf_ms, target_start, now)
+            inserted = await self._fetch_range(symbol, timeframe, tf_ms, target_start, now)
             total_inserted += inserted
             logger.info(f"Phase 1 complete: {inserted} new candles")
         
@@ -148,7 +149,7 @@ class Backfiller:
                 
                 for i, (gap_start, gap_end) in enumerate(gaps, 1):
                     logger.info(f"Gap {i}/{len(gaps)}: {datetime.fromtimestamp(gap_start/1000)} to {datetime.fromtimestamp(gap_end/1000)}")
-                    inserted = self._fetch_range(symbol, timeframe, tf_ms, gap_start, gap_end)
+                    inserted = await self._fetch_range(symbol, timeframe, tf_ms, gap_start, gap_end)
                     
                     if inserted == 0:
                         # No data available for this gap - mark as unfillable
@@ -168,7 +169,7 @@ class Backfiller:
         
         logger.info(f"✅ Backfill complete: {total_inserted} total new candles inserted")
     
-    def _fetch_range(self, symbol: str, timeframe: str, tf_ms: int, start_ts: int, end_ts: int) -> int:
+    async def _fetch_range(self, symbol: str, timeframe: str, tf_ms: int, start_ts: int, end_ts: int) -> int:
         """
         Fetch data for a specific range (backward from end_ts to start_ts).
         
@@ -202,7 +203,7 @@ class Backfiller:
             
             # Fetch OHLCV data
             try:
-                ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=1000)
+                ohlcv = await self.exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=1000)
             except ccxt.NetworkError as e:
                 logger.warning(f"Network error, retrying in 5s: {e}")
                 sleep(5)
@@ -275,7 +276,7 @@ class Backfiller:
         
         return total_inserted
     
-    def backfill_multiple(self, configs: list):
+    async def backfill_multiple(self, configs: list):
         """
         Backfill multiple symbol/timeframe combinations.
         
@@ -292,7 +293,7 @@ class Backfiller:
             logger.info(f"{'='*60}")
             
             try:
-                self.backfill(symbol, timeframe, days)
+                await self.backfill(symbol, timeframe, days)
             except Exception as e:
                 logger.error(f"Failed to backfill {symbol} {timeframe}: {e}")
                 continue
@@ -301,7 +302,7 @@ class Backfiller:
             sleep(2)
 
 
-def main():
+async def main():
     """Main entry point for backfiller"""
     parser = argparse.ArgumentParser(description='Backfill historical market data')
     parser.add_argument('--exchange', type=str, default='mexc', help='Exchange name')
@@ -322,16 +323,19 @@ def main():
             {'symbol': 'BTC/USDT', 'timeframe': '1m', 'days': 30},    # Last 30 days (1m is large)
             {'symbol': 'ETH/USDT', 'timeframe': '15m', 'days': None}, # All history
         ]
-        backfiller.backfill_multiple(configs)
+        await backfiller.backfill_multiple(configs)
     elif args.symbol and args.timeframe:
         # Backfill single symbol/timeframe
-        backfiller.backfill(args.symbol, args.timeframe, args.days)
+        await backfiller.backfill(args.symbol, args.timeframe, args.days)
     else:
         logger.error("Must specify --symbol and --timeframe, or use --all")
         return 1
+    
+    # Close exchange connection
+    await backfiller.exchange.close()
     
     return 0
 
 
 if __name__ == '__main__':
-    exit(main())
+    exit(asyncio.run(main()))

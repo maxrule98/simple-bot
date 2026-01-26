@@ -1,6 +1,6 @@
-# Trading Bot - Enterprise-Grade Architecture
+# Simple Trading Bot
 
-A professional cryptocurrency trading bot with a clean, enterprise-grade architecture designed for **complete modularity and dynamic deployment**. Features separate applications for live trading, backtesting, and data management, with Docker-based orchestration for running multiple trading instances simultaneously.
+A modular cryptocurrency trading bot with SQLite storage and CCXT exchange integration. Currently features a working data collection system with plans for backtesting and live trading.
 
 ## 🎯 Key Features
 
@@ -15,23 +15,15 @@ A professional cryptocurrency trading bot with a clean, enterprise-grade archite
 
 ## 🏗️ Architecture Philosophy
 
-### No Hardcoding - Complete Modularity
+### Configuration-Driven Design
 
-This bot is designed from the ground up to be **completely dynamic**:
+Trading parameters are configured via YAML files rather than hardcoded:
 
-- ❌ **NO** hardcoded exchanges in code
-- ❌ **NO** hardcoded trading pairs
-- ❌ **NO** hardcoded timeframes
-- ❌ **NO** hardcoded strategies
+- Exchange, symbol, timeframe defined in `config/strategies/*.yaml`
+- API keys stored in `.env` file
+- Easy to modify without changing code
 
-Instead:
-
-- ✅ All trading parameters defined in `config/strategies/*.yaml`
-- ✅ Secrets (API keys) in `.env` (shared across instances)
-- ✅ Each Docker container runs with different strategy config
-- ✅ Easy to add new instances without code changes
-
-### Docker-Based Multi-Instance Deployment
+### Multi-Instance Deployment (Planned)
 
 **Why Docker?**
 
@@ -55,50 +47,59 @@ Container 4: SOL/USDT on Kraken, 4h timeframe, Mean reversion
 
 ```
 simple-bot/
-├── apps/                          # Standalone applications
-│   ├── trader/                    # Live trading application
-│   │   ├── main.py               # Entry point for live trading
-│   │   └── utils/                # Trading-specific utilities
-│   ├── backtester/               # Backtesting application
-│   │   ├── main.py               # Entry point for backtesting
-│   │   └── utils/                # Backtesting utilities
-│   └── backfiller/               # Historical data collection
-│       ├── main.py               # Entry point for data backfilling
-│       └── utils/                # Backfiller utilities
+├── apps/                         # Standalone applications
+│   ├── backfiller/               # ✅ Historical data collector
+│   │   └── main.py               # Intelligent backfill with pagination
+│   ├── backtester/               # 📋 Strategy backtester (planned)
+│   │   └── main.py               # Stub
+│   └── trader/                   # 📋 Live trading (planned)
+│       └── main.py               # Stub
 │
-├── packages/                      # Reusable packages/modules
-│   ├── core/                     # Core trading bot logic
-│   │   └── main.py
-│   ├── exchange/                 # Exchange abstraction layer
-│   │   └── main.py               # Dynamic exchange switching
-│   ├── websocket/                # Real-time data streaming (CCXT Pro)
-│   │   └── websocket.py          # WebSocket manager for live data
-│   ├── execution/                # Trade execution engine
-│   │   └── main.py               # Order placement and management
-│   ├── timeframes/               # Timeframe management
-│   │   └── main.py               # Dynamic timeframe switching
-│   └── indicators/               # Technical indicators
-│       ├── main.py               # Indicator index/registry
-│       ├── utils.py/             # Indicator utilities
-│       ├── conventional/         # Traditional indicators
-│       │   └── rsi/              # RSI indicator
-│       │       ├── main.py
-│       │       └── utils/
-│       └── ML/                   # Machine learning indicators
-│           └── ARIMA/            # ARIMA forecasting
-│               ├── main.py
-│               └── utils/
+├── packages/                     # Reusable modules
+│   ├── database/                 # ✅ Database management
+│   │   └── db.py                 # SQLite wrapper with WAL mode
+│   ├── logging/                  # ✅ Structured logging
+│   │   └── logger.py             # File + console logging
+│   ├── websocket/                # ✅ Real-time streaming (implemented)
+│   │   └── websocket.py          # CCXT Pro WebSocket manager
+│   ├── indicators/               # 📋 Technical indicators
+│   │   └── rsi.py                # RSI stub
+│   ├── core/                     # 📋 Core logic (planned)
+│   │   └── core.py               # Stub
+│   ├── exchange/                 # 📋 Exchange abstraction (planned)
+│   │   └── exchange.py           # Stub
+│   ├── execution/                # 📋 Order execution (planned)
+│   ├── timeframes/               # 📋 Timeframe utilities (planned)
+│   ├── risk/                     # 📋 Risk management (planned)
+│   └── utils/                    # Utility functions
 │
-├── config/                        # Configuration management
-│   ├── config.py                 # Main configuration module
-│   └── strategies/               # Strategy configurations
-│       └── test.yaml             # Example strategy config
+├── config/                       # Configuration
+│   ├── settings.py               # App settings
+│   ├── exchanges.py              # Exchange credentials management
+│   └── strategies/               # Strategy YAML files
+│       ├── btc_usdt_mexc_1m.yaml
+│       ├── btc_usdt_mexc_1h.yaml
+│       ├── btc_usdt_mexc_4h.yaml
+│       └── eth_usdt_mexc_15m.yaml
 │
-├── data/                          # Data storage (auto-created)
-│   └── trading.db                # SQLite database
+├── scripts/                      # Utility scripts
+│   └── populate_db.py            # Automated multi-symbol backfill
 │
-├── pyproject.toml                # Dependencies and project metadata
-└── README.md                      # This file
+├── data/                         # Generated data (gitignored)
+│   └── trading.db                # SQLite database (~218 MB)
+│
+├── docs/                         # Documentation
+│   ├── ARCHITECTURE.md           # Architecture diagrams
+│   ├── DATABASE.md               # Database schema details
+│   ├── WEBSOCKET.md              # WebSocket integration guide
+│   ├── DATA_STRATEGY.md          # Multi-instance data storage
+│   ├── DATA_FLOW.md              # REST vs WebSocket comparison
+│   └── QUICKSTART.md             # Quick reference
+│
+├── schema.py                     # Database table initialization
+├── pyproject.toml                # Dependencies (managed by uv)
+├── docker-compose.yml            # Container orchestration
+└── README.md                     # This file
 ```
 
 ## 🏗️ Architecture Overview
@@ -107,424 +108,280 @@ simple-bot/
 
 The project uses a multi-application architecture where each app serves a specific purpose:
 
-#### **Trader** (`apps/trader/`)
+#### **Backfiller** (`apps/backfiller/`) ✅
 
-- **Purpose**: Live trading operations with real money
-- **Data Source**: WebSocket streams (real-time) + REST API (historical warmup)
-- **Responsibility**: Executes trades on live markets based on signals
-- **Shared Code**: Uses the same strategy logic as backtester for consistency
-- **Entry Point**: `apps/trader/main.py`
+- **Purpose**: Collect and maintain historical market data
+- **Status**: Fully implemented and working
+- **Features**:
+  - Intelligent backward pagination from present to earliest available data
+  - Automatic gap detection and filling
+  - Unfillable gap tracking (exchange outages)
+  - Resume support (fetches only new data on subsequent runs)
+  - Multi-symbol/timeframe support
+- **Data Source**: CCXT REST API
+- **Entry Point**: `apps/backfiller/main.py`
 
-#### **Backtester** (`apps/backtester/`)
+#### **Backtester** (`apps/backtester/`) 📋
 
 - **Purpose**: Simulate trades using historical data
-- **Data Source**: REST API (historical data from database)
-- **Responsibility**: Evaluate strategy performance before going live
-- **Shared Code**: Reuses strategy and execution logic from packages
-- **Entry Point**: `apps/backtester/main.py`
+- **Status**: Planned - stub only
+- **Data Source**: SQLite database (populated by backfiller)
+- **Will Use**: Strategy logic from `packages/strategies/`
 
-#### **Backfiller** (`apps/backfiller/`)
+#### **Trader** (`apps/trader/`) 📋
 
-- **Purpose**: Populate historical market data
-- **Responsibility**: Download and store historical OHLCV data for analysis
-- **Entry Point**: `apps/backfiller/main.py`
+- **Purpose**: Execute live trades with real money
+- **Status**: Planned - stub only
+- **Data Source**: WebSocket streams (real-time) + REST API (historical warmup)
+- **Will Use**: Same strategy logic as backtester for consistency
 
 ### Packages (`packages/`)
 
 Reusable, modular components shared across all applications:
 
-#### **Core** (`packages/core/`)
+#### **Database** (`packages/database/`) ✅
 
-- Central trading bot logic
-- Orchestrates other packages
-- Main coordination layer
+- SQLite connection management with WAL mode
+- Query helpers for OHLCV data, gaps, and metadata
+- Concurrent read/write support
+- Used by: backfiller (write), backtester/trader (read)
 
-#### **Exchange** (`packages/exchange/`)
+#### **Logging** (`packages/logging/`) ✅
 
-- Exchange abstraction layer (REST API)
-- Dynamic exchange switching based on configuration
-- Unified interface for all exchanges (via CCXT)
-- Supports Binance, Kraken, Coinbase, and 100+ others
+- Structured logging with timestamps
+- File output (`logs/`) and console output
+- Module-level loggers
+- Used by: all applications
 
-#### **WebSocket** (`packages/websocket/`)
+#### **WebSocket** (`packages/websocket/`) ✅
 
-- Real-time market data streaming (CCXT Pro)
-- Used by live trader for sub-second updates
-- Streams OHLCV, ticker, trades, and order book data
+- Real-time market data streaming via CCXT Pro
+- Supports OHLCV, ticker, trades, order book streams
 - Stores in same database tables as REST data
+- Will be used by: live trader for sub-second updates
+- Documentation: `docs/WEBSOCKET.md`
 
-#### **Execution** (`packages/execution/`)
+#### **Indicators** (`packages/indicators/`) 📋
 
-- Trade execution engine
-- Places orders based on signals
-- Manages order lifecycle
-- Handles order confirmation and tracking
+- Technical indicators for strategy signals
+- Currently: RSI stub only
+- Planned: MACD, Bollinger Bands, moving averages, etc.
+- Will support conventional and ML-based indicators
 
-#### **Timeframes** (`packages/timeframes/`)
+#### **Core** (`packages/core/`) 📋
 
-- Dynamic timeframe management
-- Switch between 1m, 5m, 15m, 1h, 4h, 1d, etc.
-- Modular design for easy timeframe addition
-- Timeframe conversion utilities
+- Central orchestration logic (planned)
+- Will coordinate packages
+- Strategy execution engine
 
-#### **Indicators** (`packages/indicators/`)
+#### **Exchange** (`packages/exchange/`) 📋
 
-- Indicator registry and management
-- Two categories:
-  - **Conventional** (`conventional/`): Traditional technical indicators
-    - RSI, MACD, Bollinger Bands, etc.
-  - **ML** (`ML/`): Machine learning-based indicators
-    - ARIMA forecasting, LSTM predictions, etc.
-- Each indicator in its own folder with utilities
-- Example structure:
-  - `packages/indicators/conventional/rsi/main.py`
-  - `packages/indicators/ML/ARIMA/main.py`
+- Exchange abstraction layer (planned)
+- Will provide unified interface via CCXT
+- Support for 100+ exchanges
+
+#### **Execution** (`packages/execution/`) 📋
+
+- Order placement and management (planned)
+- Will handle order lifecycle
+- Position tracking
 
 ### Configuration (`config/`)
 
-#### **Main Config** (`config/config.py`)
+#### **Settings** (`config/settings.py`) ✅
 
-- Central configuration module
-- Manages app settings and parameters
-- Environment-specific configurations
+- Application configuration
+- Database paths, logging levels
+- Used by all applications
 
-#### **Strategy Configs** (`config/strategies/`)
+#### **Exchange Config** (`config/exchanges.py`) ✅
+
+- Exchange credentials management
+- Loads API keys from `.env`
+- Validates required credentials
+
+#### **Strategy Configs** (`config/strategies/`) ✅
 
 - YAML-based strategy definitions
-- Declarative strategy configuration
-- Easy strategy composition without code changes
-- Example: `test.yaml`
+- Examples: `btc_usdt_mexc_1m.yaml`, `eth_usdt_mexc_15m.yaml`
+- Define: exchange, symbol, timeframe, indicators, entry/exit rules
+- Will be used by backtester and trader
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- Python 3.12+ (for local development)
-- [UV](https://github.com/astral-sh/uv) package manager (for local development)
+- Python 3.12+
+- [UV](https://github.com/astral-sh/uv) package manager
+- Exchange API keys (optional for public data)
 
 ### Setup
 
-1. **Clone and Configure**
+1. **Install Dependencies**
 
    ```bash
    cd simple-bot
+   uv sync
+   ```
 
-   # Copy environment template
+2. **Configure Environment** (optional, for authenticated access)
+
+   ```bash
    cp .env.example .env
-
-   # Edit .env and add your API keys
-   nano .env
+   nano .env  # Add your API keys
    ```
 
-2. **Create Strategy Configurations**
-
-   Strategy configs are in `config/strategies/*.yaml`. See examples:
-   - `btc_binance_1h.yaml` - BTC on Binance, 1-hour timeframe
-   - `eth_binance_15m.yaml` - ETH on Binance, 15-minute scalping
-   - `btc_coinbase_1h.yaml` - BTC on Coinbase, 1-hour trend following
-
-3. **Build Docker Image**
+3. **Initialize Database**
 
    ```bash
-   docker-compose build
+   uv run python schema.py
    ```
 
-### Running with Docker (Recommended)
+### Current Usage
 
-#### Start All Trading Instances
+#### Collect Historical Data
 
-```bash
-# Start all configured trading bots
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# View specific bot logs
-docker-compose logs -f trader-btc-binance-1h
-```
-
-#### Start Specific Instances
+**Single symbol/timeframe:**
 
 ```bash
-# Only run BTC trader
-docker-compose up -d trader-btc-binance-1h
+# Backfill specific data
+uv run python -m apps.backfiller.main --symbol BTC/USDT --timeframe 1h
 
-# Run multiple specific traders
-docker-compose up -d trader-btc-binance-1h trader-eth-binance-15m
+# With specific exchange
+uv run python -m apps.backfiller.main --symbol ETH/USDT --timeframe 15m --exchange binance
 ```
 
-#### Backfill Historical Data
+**Multiple symbols/timeframes:**
 
 ```bash
-# Run backfiller to populate database
-docker-compose up backfiller
+# Run automated population script
+uv run python scripts/populate_db.py
 
-# Check data
-docker exec -it backfiller ls -lh /app/data
+# This will backfill:
+# - 5 symbols: BTC, ETH, BNB, SOL, XRP (all vs USDT)
+# - 6 timeframes: 1m, 5m, 15m, 1h, 4h, 1d
+# - All available history from MEXC
 ```
 
-#### Run Backtests
+**Check database:**
 
 ```bash
-# Backtester is in 'testing' profile
-docker-compose --profile testing up backtester
+ls -lh data/trading.db
+sqlite3 data/trading.db "SELECT COUNT(*) FROM ohlcv_data;"
 ```
 
-### Running Locally (Development)
+### Future Usage (When Implemented)
+
+**Backtesting:**
 
 ```bash
-# Install dependencies
-uv sync
-
-# Run trader with specific strategy
-uv run python apps/trader/main.py --config config/strategies/btc_binance_1h.yaml
-
-# Run backfiller
-uv run python apps/backfiller/main.py
-
-# Run backtester
-uv run python apps/backtester/main.py --config config/strategies/test.yaml
+uv run python -m apps.backtester.main --config config/strategies/btc_usdt_mexc_1h.yaml
 ```
 
-### Adding New Trading Instances
+**Live Trading:**
 
-1. **Create Strategy Config**
-
-   ```bash
-   # Copy existing config
-   cp config/strategies/btc_binance_1h.yaml config/strategies/sol_kraken_4h.yaml
-
-   # Edit new config
-   nano config/strategies/sol_kraken_4h.yaml
-   ```
-
-   ```yaml
-   trading:
-     exchange: kraken
-     symbol: SOL/USDT
-     timeframe: 4h
-   # ... rest of strategy
-   ```
-
-2. **Add to docker-compose.yml**
-
-   ```yaml
-   trader-sol-kraken-4h:
-     build: .
-     container_name: trader-sol-kraken-4h
-     command: python apps/trader/main.py --config /app/config/strategies/sol_kraken_4h.yaml
-     volumes:
-       - ./data:/app/data
-       - ./logs:/app/logs
-       - ./config/strategies:/app/config/strategies:ro
-     env_file:
-       - .env
-     restart: unless-stopped
-   ```
-
-3. **Start New Instance**
-
-   ```bash
-   docker-compose up -d trader-sol-kraken-4h
-   ```
-
-**That's it!** No code changes needed.
+```bash
+uv run python -m apps.trader.main --config config/strategies/btc_usdt_mexc_1h.yaml
+```
 
 ## ⚙️ Configuration
 
-### Architecture: Secrets vs Trading Parameters
+### Environment Variables (`.env`)
 
-**Clear Separation:**
-
-| Configuration Type     | Location                   | Purpose                               | Shared?                 |
-| ---------------------- | -------------------------- | ------------------------------------- | ----------------------- |
-| **Secrets** (API keys) | `.env`                     | Authentication credentials            | ✅ Yes - all containers |
-| **Trading Parameters** | `config/strategies/*.yaml` | Exchange, symbol, timeframe, strategy | ❌ No - per container   |
-
-### 1. Environment Variables (`.env`) - Secrets Only
-
-Contains **only** API credentials and system-wide settings. **Never** put trading parameters here.
+API credentials for exchanges (optional for public data):
 
 ```bash
-# .env
+# Exchange API Keys
+MEXC_API_KEY=your_key
+MEXC_API_SECRET=your_secret
+
 BINANCE_API_KEY=your_key
 BINANCE_API_SECRET=your_secret
-COINBASE_API_KEY=your_key
-COINBASE_API_SECRET=your_secret
-DATABASE_URL=sqlite:///data/trading.db
+
+# System Settings
+DATABASE_PATH=data/trading.db
 LOG_LEVEL=INFO
 ```
 
-### 2. Strategy Configuration (YAML) - Trading Parameters
+### Strategy Configuration (YAML)
 
-Each strategy config defines **all** trading parameters dynamically:
+Strategy configs define trading parameters. Example from `config/strategies/btc_usdt_mexc_1h.yaml`:
 
 ```yaml
-# config/strategies/my_strategy.yaml
-trading:
-  exchange: binance # Dynamic - change per instance
-  symbol: BTC/USDT # Dynamic - any pair
-  timeframe: 1h # Dynamic - any timeframe
-
 strategy:
-  name: "RSI_Strategy"
-  indicators:
-    - name: rsi
-      period: 14
-      overbought: 70
-      oversold: 30
+  name: "BTC 1H Strategy"
+  exchange: mexc
+  symbol: BTC/USDT
+  timeframe: 1h
 
-  entry:
-    long:
-      - rsi < 30
-    short:
-      - rsi > 70
+indicators:
+  rsi:
+    period: 14
+    overbought: 70
+    oversold: 30
 
-  exit:
-    take_profit: 2.5
-    stop_loss: 1.5
+entry:
+  long:
+    - rsi < 30
+  short:
+    - rsi > 70
+
+exit:
+  take_profit_pct: 2.0
+  stop_loss_pct: 1.0
 
 risk:
-  position_size: 100
-  max_open_positions: 3
+  position_size_usd: 100
+  max_positions: 3
 ```
 
-### 3. Supported Exchanges
+### Supported Exchanges
 
-All exchanges supported by [CCXT](https://github.com/ccxt/ccxt) - 100+ exchanges:
+All exchanges supported by [CCXT](https://github.com/ccxt/ccxt) work (100+ exchanges):
 
-- Binance, Binance US
-- Coinbase, Coinbase Pro
-- Kraken
-- Bybit
-- OKX
-- Bitfinex
-- And many more...
+- Binance, Coinbase, Kraken, Bybit, OKX, MEXC, KuCoin, and many more
 
-Just change `exchange: binance` to `exchange: kraken` in your strategy YAML.
+### Supported Timeframes
 
-### 4. Supported Timeframes
+- Minutes: `1m`, `5m`, `15m`, `30m`
+- Hours: `1h`, `2h`, `4h`, `6h`, `12h`
+- Days: `1d`, `3d`
+- Weeks: `1w`
+- Months: `1M`
 
-- **Minutes**: 1m, 5m, 15m, 30m
-- **Hours**: 1h, 2h, 4h, 6h, 12h
-- **Days**: 1d, 3d
-- **Weeks**: 1w
-- **Months**: 1M
+## 📊 Database
 
-Just change `timeframe: 1h` to `timeframe: 15m` in your strategy YAML.
+### Schema
 
-## 📊 Indicators
+See [docs/DATABASE.md](docs/DATABASE.md) for complete details.
 
-### Conventional Indicators (`packages/indicators/conventional/`)
+**Current tables:**
 
-Traditional technical analysis indicators:
+- `ohlcv_data` - Historical price data (shared across all strategies)
+- `ticker_data` - Real-time ticker updates
+- `strategy_metadata` - Strategy configurations
+- `trades` - Executed trades (per strategy)
+- `positions` - Current positions (per strategy)
+- `signals` - Trading signals (per strategy)
+- `indicator_cache` - Cached indicator calculations
+- `unfillable_gaps` - Tracked gaps from exchange outages
 
-- **RSI** (Relative Strength Index) - `conventional/rsi/`
-- **MACD** (Moving Average Convergence Divergence)
-- **Bollinger Bands**
-- **Moving Averages** (SMA, EMA)
-- **Stochastic Oscillator**
-- And more...
+**Key features:**
 
-Each indicator follows the structure:
+- WAL mode for concurrent read/write
+- Composite keys for efficient querying
+- ~218 MB with 1M+ candles across 30 symbol/timeframe combinations
 
-````
-packages/indicators/conventional/[indicator_name]/
-├── maDeployment Workflow
+## 📚 Documentation
 
-### 1. Development & Testing
+Comprehensive documentation in [`docs/`](docs/):
 
-```bash
-# Local development
-uv sync
-uv run python apps/backfiller/main.py
-uv run python apps/backtester/main.py --config config/strategies/test.yaml
-````
-
-### 2. Create Strategy
-
-```bash
-# Copy template
-cp config/strategies/test.yaml config/strategies/my_new_strategy.yaml
-
-# Edit parameters
-nano config/strategies/my_new_strategy.yaml
-```
-
-### 3. Backtest Strategy
-
-```bash
-# Test locally
-uv run python apps/backtester/main.py --config config/strategies/my_new_strategy.yaml
-
-# Or with Docker
-docker-compose --profile testing up backtester
-```
-
-### 4. Deploy to Production
-
-```bash
-# Add to docker-compose.yml
-nano docker-compose.yml
-
-# Start new instance
-docker-compose up -d trader-my-new-strategy
-
-# Monitor
-docker-compose logs -f trader-my-new-strategy
-```
-
-### 5. Scale Horizontally
-
-```bash
-# Add more strategies in docker-compose.yml
-# Each container runs independently with shared database
-
-docker-compose up -d  # Start all instances
-```
-
-## 🐳 Docker Commands Cheat Sheet
-
-````bash
-# Build
-docker-compose build
-
-# Start all
-docker-compose up -d
-
-# Start specific
-docker-compose up -d trader-btc-binance-1h
-
-# Stop all
-docker-compose down
-
-# Stop specific
-docker-compose stop trader-btc-binance-1h
-
-# View logs (all)
-docker-compose logs -f
-
-# View logs (specific)
-docker-compose logs -f trader-btc-binance-1h
-
-# Restart
-docker-compose restart trader-btc-binance-1h
-
-# View running containers
-docker-compose ps
-
-# Ex1. Zero Hardcoding
-
-**Problem**: Traditional bots hardcode exchange/symbol/timeframe in code
-**Solution**: Everything in YAML configs
-
-```yaml
-# Want to trade ETH instead of BTC? Just edit YAML
-trading:
-  symbol: ETH/USDT  # Was: BTC/USDT
-````
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
+- **[DATABASE.md](docs/DATABASE.md)** - Database schema and strategy
+- **[WEBSOCKET.md](docs/WEBSOCKET.md)** - WebSocket integration for real-time data
+- **[DATA_STRATEGY.md](docs/DATA_STRATEGY.md)** - Multi-instance data storage approach
+- **[DATA_FLOW.md](docs/DATA_FLOW.md)** - REST vs WebSocket data flow
+- **[QUICKSTART.md](docs/QUICKSTART.md)** - Quick command reference`
 
 ### 2. Docker-First Deployment
 
@@ -581,242 +438,70 @@ Backtester and Trader share exact same code:
 - 🚨 **Error Handling** - Containers auto-restart on failure
 - 💾 **Backup Database** - Regular backups of `./data/trading.db`
 
-### Resource Management
-
-Each container has resource limits in `docker-compose.yml`:
-
-```yaml
-deploy:
-  resources:
-    limits:
-      cpus: "0.5" # Max CPU usage
-      memory: 512M # Max memory
-```
-
-Adjust based on your server capacity.
+## 🛠️ Development
 
 ### Adding Dependencies
 
 ```bash
-# Production dependencies
+# Production
 uv add pandas numpy ta-lib
 
-# Development dependencies
+# Development
 uv add --dev pytest black ruff mypy
 ```
 
 ### Code Quality
 
-````bash
+```bash
 # Format code
 uv run black apps/ packages/ config/
 
-# LiDocker Issues
+# Type checking
+uv run mypy apps/ packages/
 
-```bash
-# Container won't start
-docker-compose logs trader-btc-binance-1h
-
-# Check container status
-docker-compose ps
-
-# Rebuild image
-docker-compose build --no-cache
-
-# Remove all and restart
-docker-compose down -v
-docker-compose up -d
-````
-
-### Database Issues
-
-```bash
-# Check database exists
-ls -lh data/trading.db
-
-# Database locked
-# Stop all containers first
-docker-compose down
-docker-compose up -d
+# Linting
+uv run ruff check apps/ packages/
 ```
-
-### Exchange Errors
-
-- Verify API keys in `.env`
-- Check exchange name matches CCXT: [supported exchanges](https://github.com/ccxt/ccxt#supported-cryptocurrency-exchange-markets)
-- Enable rate limiting in strategy YAML
-- Some exchanges require API keys even for public data
-
-### Strategy Config Errors
-
-```bash
-# Validate YAML syntax
-python -c "import yaml; yaml.safe_load(open('config/strategies/test.yaml'))"
-
-# Check file is mounted in container
-docker-compose exec trader-btc-binance-1h ls /app/config/strategies/
-```
-
-### Multiple Instances Not Working
-
-- Check each uses different `container_name` in docker-compose.yml
-- Ensure strategy configs have different filenames
-- Verify all share same database volume: `./data:/app/data`
-
-### Separation of Concerns
-
-- **Apps** handle specific use cases (trading, backtesting, backfilling)
-- **Packages** provide reusable functionality
-- **Config** manages all settings declaratively
-
-### Consistency
-
-- Backtester and Trader share the same codebase
-- What works in backtesting works in live trading
-- No surprises when going from simulation to production
-
-### Scalability
-
-- Add new indicators by creating folders
-- Support new exchanges through configuration
-- Define new strategies with YAML files
-
-### Maintainability
-
-- Clear folder structure
-- Each component has a single responsibility
-- Easy to locate and update specific functionality
-
-## 📦 Package Organization
-
-### Why This Structure?
-
-1. **`apps/`** - Separate applications keep concerns isolated
-   - Each app can be run independently
-   - Different entry points for different purposes
-   - Easy to deploy specific functionality
-
-2. **`packages/`** - Shared code prevents duplication
-   - Single source of truth for business logic
-   - Reusable across all applications
-   - Easier testing and maintenance
-
-3. **`config/`** - Configuration as code
-   - YAML for strategies (non-developers can edit)
-   - Python for complex configurations
-   - Separation of code and configuration
-
-## ⚠️ Safety & Best Practices
-
-**Critical Guidelines:**
-
-- **Test Thoroughly** - Always backtest before live trading
-- **Start Small** - Use minimal capital initially
-- **Paper Trade** - Test with live data but no real orders first
-- **Risk Management** - Implement stop-losses and position sizing
-- **Monitor Actively** - Never leave trading bots unattended
-- **Secure API Keys** - Use environment variables, never commit keys
-- **Enable Rate Limits** - Prevent exchange bans
-- **Comprehensive Logging** - Track all actions for debugging
-- **Error Handling** - Handle edge cases gracefully
 
 ## 🐛 Troubleshooting
 
-### Import Errors
+### Common Issues
 
-- Ensure you're running from project root
-- Use `uv run python` not just `python`
-- Check that all folders have proper structure
+**Import Errors**
 
-### Exchange Errors
+- Run from project root: `uv run python -m apps.backfiller.main`
+- Check package imports use correct paths
 
-- Verify exchange name is spelled correctly
-- Enable rate limiting in configuration
-- Some exchanges require API keys for public data
-- Check exchange status (maintenance, downtime)
+**Exchange Errors**
 
-### Database Errors
+- Verify exchange name matches CCXT (case-sensitive)
+- Check API keys if using authenticated endpoints
+- Some exchanges require API keys even for public data
 
-- Ensure `data/` directory is writable
-- Check available disk space
-- Verify SQLite is properly installed
+**Database Issues**
 
-### Backtest vs Live Discrepancies
+- Ensure `data/` directory exists and is writable
+- Check disk space if database is growing
+- WAL mode handles concurrent access automatically
 
-- Ensure both use same code from `packages/`
-- Check for lookahead bias in indicators
-- Verify slippage and fees are modeled
-- Confirm identical strategy parameters
+**Backfiller Stuck**
 
-## 📚 Documentation
+- Check logs in `logs/` directory
+- Verify network connectivity
+- Some exchanges have rate limits even for public data
 
-### Project Documentation
+## ⚠️ Safety & Best Practices
 
-All comprehensive documentation is located in the [docs/](docs/) folder:
+**When live trading is implemented:**
 
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Visual architecture diagrams and design philosophy
-- **[docs/DATABASE.md](docs/DATABASE.md)** - Complete database schema and storage strategy
-- **[docs/DATA_STRATEGY.md](docs/DATA_STRATEGY.md)** - Visual guide to multi-instance data storage
-- **[docs/DATA_FLOW.md](docs/DATA_FLOW.md)** - REST vs WebSocket data flow comparison
-- **[docs/DATA_SUMMARY.md](docs/DATA_SUMMARY.md)** - Data architecture best practices summary
-- **[docs/WEBSOCKET.md](docs/WEBSOCKET.md)** - WebSocket integration for real-time live trading data
-- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** - Quick reference for common commands
-- **[docs/AUDIT.md](docs/AUDIT.md)** - Pre-implementation audit and architecture review
-
-### Understanding Data Storage
-
-**Key Question**: How do we store multiple exchanges, symbols, timeframes efficiently?
-
-**Answer**: See **[docs/DATABASE.md](docs/DATABASE.md)** and **[docs/DATA_STRATEGY.md](docs/DATA_STRATEGY.md)**
-
-**TL;DR**:
-
-- ✅ One SQLite database with smart schema
-- ✅ Market data (OHLCV) shared across all strategies
-- ✅ Trade data isolated per strategy (by `strategy_id`)
-- ✅ Composite key partitioning: `(exchange, symbol, timeframe)`
-- ✅ WAL mode for concurrent access
-- ✅ No data duplication, no write conflicts
-- ✅ **Works for both REST API (historical) and WebSocket (real-time) data**
-
-### Real-Time Data with WebSockets
-
-**Key Question**: How do we handle live WebSocket data for real-time trading?
-
-**Answer**: See **[docs/WEBSOCKET.md](docs/WEBSOCKET.md)**
-
-**TL;DR**:
-
-- ✅ Uses CCXT Pro for WebSocket streams
-- ✅ Stores in **same database tables** as REST data
-- ✅ `INSERT OR REPLACE` updates current forming candles
-- ✅ Live trader: WebSocket for real-time + REST for historical warmup
-- ✅ Seamless transition: strategy doesn't care about data source
-
-### Code Structure
-
-- Review `packages/` for core functionality
-- Check `apps/` for application-specific logic
-- Examine `config/strategies/` for strategy examples
-- Run `python schema.py` to initialize database
-
-### External Resources
-
-- [CCXT Documentation](https://docs.ccxt.com/) - Exchange integration
-- [UV Documentation](https://github.com/astral-sh/uv) - Package manager
-- [SQLite Documentation](https://www.sqlite.org/docs.html) - Database
-
-## 🤝 Contributing
-
-When adding new features:
-
-1. **Indicators** - Add to `packages/indicators/conventional/` or `packages/indicators/ML/`
-2. **Exchanges** - Extend `packages/exchange/main.py`
-3. **Strategies** - Create YAML in `config/strategies/`
-4. **Apps** - Add new application in `apps/` if needed
-5. Follow the existing folder structure
-6. Add utilities in respective `utils/` folders
-7. Update this README with new functionality
+- ⚠️ **Test Thoroughly** - Always backtest strategies first
+- 💰 **Start Small** - Use minimal capital initially
+- 📄 **Paper Trade** - Verify with simulated trades before real money
+- 🛡️ **Risk Management** - Implement stop-losses and position limits
+- 👀 **Monitor Actively** - Check logs regularly
+- 🔐 **Secure Credentials** - Never commit API keys to git
+- ⏱️ **Respect Rate Limits** - Avoid exchange bans
+- 📊 **Log Everything** - Maintain audit trail of all actions
 
 ## 📄 License
 

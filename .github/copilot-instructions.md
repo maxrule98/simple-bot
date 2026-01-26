@@ -30,12 +30,12 @@ This document provides essential context and guidelines for AI assistants workin
 
 ```
 simple-bot/
-├── apps/                    # Standalone executables (entry points)
-│   ├── trader/             # Live trading with real money
-│   ├── backtester/         # Historical strategy simulation
-│   └── backfiller/         # Historical data collection
+├── apps/                  # Standalone executables (entry points)
+│   ├── trader/            # Live trading with real money
+│   ├── backtester/        # Historical strategy simulation
+│   └── backfiller/        # Historical data collection
 │
-├── packages/               # Reusable modules (shared libraries)
+├── packages/              # Reusable modules (shared libraries)
 │   ├── core/              # Central orchestration
 │   ├── exchange/          # CCXT exchange abstraction (REST)
 │   ├── websocket/         # CCXT Pro WebSocket streaming
@@ -43,35 +43,35 @@ simple-bot/
 │   ├── timeframes/        # Dynamic timeframe handling
 │   ├── indicators/        # Technical indicators
 │   │   ├── conventional/  # RSI, MACD, Bollinger Bands, etc.
-│   │   └── ML/           # ARIMA, LSTM, ML-based indicators
+│   │   └── ML/            # ARIMA, LSTM, ML-based indicators
 │   ├── database/          # Database connection and queries
 │   ├── logging/           # Structured logging
 │   ├── config/            # Configuration loading
 │   └── strategies/        # Strategy execution engine
 │
 ├── config/                # Configuration files
-│   ├── config.py         # Main config module
-│   └── strategies/       # YAML strategy definitions
+│   ├── config.py          # Main config module
+│   └── strategies/        # YAML strategy definitions
 │
-├── docs/                 # Comprehensive documentation
-│   ├── ARCHITECTURE.md   # Architecture diagrams
-│   ├── DATABASE.md       # Database schema and strategy
-│   ├── WEBSOCKET.md      # WebSocket integration guide
-│   ├── DATA_STRATEGY.md  # Multi-instance data storage
-│   ├── DATA_FLOW.md      # REST vs WebSocket comparison
-│   ├── DATA_SUMMARY.md   # Data best practices
-│   ├── QUICKSTART.md     # Quick reference
-│   └── AUDIT.md          # Pre-implementation audit
+├── docs/                  # Comprehensive documentation
+│   ├── ARCHITECTURE.md    # Architecture diagrams
+│   ├── DATABASE.md        # Database schema and strategy
+│   ├── WEBSOCKET.md       # WebSocket integration guide
+│   ├── DATA_STRATEGY.md   # Multi-instance data storage
+│   ├── DATA_FLOW.md       # REST vs WebSocket comparison
+│   ├── DATA_SUMMARY.md    # Data best practices
+│   ├── QUICKSTART.md      # Quick reference
+│   └── AUDIT.md           # Pre-implementation audit
 │
-├── data/                 # Database storage (Docker volume)
-│   └── trading.db       # SQLite database
+├── data/                  # Database storage (Docker volume)
+│   └── trading.db         # SQLite database
 │
-├── logs/                 # Application logs (Docker volume)
+├── logs/                  # Application logs (Docker volume)
 │
-├── schema.py            # Database initialization script
-├── pyproject.toml       # Python dependencies
-├── Dockerfile           # Container image definition
-└── docker-compose.yml   # Multi-container orchestration
+├── schema.py              # Database initialization script
+├── pyproject.toml         # Python dependencies
+├── Dockerfile             # Container image definition
+└── docker-compose.yml     # Multi-container orchestration
 ```
 
 ## 🗄️ Database Schema
@@ -201,7 +201,7 @@ import sys
 from datetime import datetime
 
 # Third-party
-import ccxt
+import ccxt.pro as ccxt
 import pandas as pd
 
 # Local packages

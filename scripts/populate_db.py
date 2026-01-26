@@ -14,6 +14,7 @@ Usage:
 """
 
 import argparse
+import asyncio
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -59,7 +60,7 @@ POPULAR_TIMEFRAMES = [
 # ]
 
 
-def populate_data(exchange: str, symbols: list, timeframes: list, days: int = None):
+async def populate_data(exchange: str, symbols: list, timeframes: list, days: int = None):
     """
     Populate database with historical data for given symbols and timeframes.
     
@@ -94,11 +95,14 @@ def populate_data(exchange: str, symbols: list, timeframes: list, days: int = No
                 backfiller = Backfiller(exchange_name=exchange)
                 
                 # Run backfill (days=None means fetch all history)
-                backfiller.backfill(
+                await backfiller.backfill(
                     symbol=symbol,
                     timeframe=timeframe,
                     days=days
                 )
+                
+                # Close exchange connection
+                await backfiller.exchange.close()
                 
                 results["success"].append((symbol, timeframe))
                 logger.info(f"✅ Completed: {symbol} {timeframe}")
@@ -124,7 +128,7 @@ def populate_data(exchange: str, symbols: list, timeframes: list, days: int = No
     logger.info("🎉 Data population complete!")
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser(
         description="Populate database with historical market data"
     )
@@ -199,7 +203,7 @@ def main():
     # Start population
     start_time = datetime.now()
     
-    populate_data(
+    await populate_data(
         exchange=args.exchange,
         symbols=symbols,
         timeframes=timeframes,
@@ -212,4 +216,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

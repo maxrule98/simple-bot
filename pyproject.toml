@@ -5,16 +5,11 @@ description = "A cryptocurrency trading bot with SQLite database"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "ccxt>=4.4.42",
+    "ccxt>=4.4.42",  # Includes both REST and Pro (WebSocket) functionality
     "pandas>=2.2.0",
     "numpy>=1.26.0",
     "pyyaml>=6.0.1",
     "python-dotenv>=1.0.0",
-]
-
-[project.optional-dependencies]
-websocket = [
-    "ccxt[pro]>=4.4.42",  # WebSocket support for real-time data
 ]
 
 [build-system]

@@ -24,7 +24,7 @@ Note: WebSocket data and REST data are identical structure,
 """
 
 import asyncio
-import ccxt.pro as ccxtpro
+import ccxt.pro as ccxt
 from typing import Dict, List, Optional
 from pathlib import Path
 import time
@@ -57,7 +57,7 @@ class WebSocketManager:
         
     async def connect(self):
         """Establish websocket connection to exchange."""
-        exchange_class = getattr(ccxtpro, self.exchange_name)
+        exchange_class = getattr(ccxt, self.exchange_name)
         self.exchange = exchange_class({
             'enableRateLimit': True,
             # API keys loaded from environment if needed
