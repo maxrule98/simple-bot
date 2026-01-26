@@ -99,16 +99,37 @@ class Backfiller:
         
         total_inserted = 0
         
-        # PHASE 1: Fill forward from latest to now (get updates)
-        if latest_ts:
-            logger.info(f"\n=== Phase 1: Filling forward from {datetime.fromtimestamp(latest_ts/1000)} ===")
-            inserted = self._fetch_range(symbol, timeframe, tf_ms, latest_ts + 1, int(datetime.now().timestamp() * 1000), "forward")
+        # Determine what to fetch based on existing data
+        now = int(datetime.now().timestamp() * 1000)
+        
+        # Always fetch backward from now
+        if days:
+            # Limited fetch based on --days
+            since_ts = int((datetime.now() - timedelta(days=days)).timestamp() * 1000)
+            target_start = max(since_ts, earliest_ts) if earliest_ts else since_ts
+            logger.info(f"=== Phase 1: Fetching backward from now (last {days} days) ===")
+            inserted = self._fetch_range(symbol, timeframe, tf_ms, target_start, now)
+            total_inserted += inserted
+            logger.info(f"Phase 1 complete: {inserted} new candles")
+        elif earliest_ts:
+            # We have data - only fetch from now to just before our earliest data
+            # This will pick up new candles at the top, then stop when hitting existing data
+            logger.info(f"=== Phase 1: Fetching backward from now to {datetime.fromtimestamp(earliest_ts/1000)} ===")
+            target_start = earliest_ts - (tf_ms * 10)  # Stop just before our existing data
+            inserted = self._fetch_range(symbol, timeframe, tf_ms, target_start, now)
+            total_inserted += inserted
+            logger.info(f"Phase 1 complete: {inserted} new candles")
+        else:
+            # No data at all - fetch everything from now back to 2017
+            logger.info(f"=== Phase 1: Fetching all available history from now ===")
+            target_start = int(datetime(2017, 1, 1).timestamp() * 1000)
+            inserted = self._fetch_range(symbol, timeframe, tf_ms, target_start, now)
             total_inserted += inserted
             logger.info(f"Phase 1 complete: {inserted} new candles")
         
         # PHASE 2: Detect and fill gaps
         if existing_count > 0:
-            logger.info(f"\n=== Phase 2: Checking for gaps ===")
+            logger.info(f"=== Phase 2: Checking for gaps ===")
             all_gaps = self.db.find_gaps(self.exchange_name, symbol, timeframe, tf_ms)
             
             # Filter out known unfillable gaps
@@ -127,7 +148,7 @@ class Backfiller:
                 
                 for i, (gap_start, gap_end) in enumerate(gaps, 1):
                     logger.info(f"Gap {i}/{len(gaps)}: {datetime.fromtimestamp(gap_start/1000)} to {datetime.fromtimestamp(gap_end/1000)}")
-                    inserted = self._fetch_range(symbol, timeframe, tf_ms, gap_start, gap_end, "forward")
+                    inserted = self._fetch_range(symbol, timeframe, tf_ms, gap_start, gap_end)
                     
                     if inserted == 0:
                         # No data available for this gap - mark as unfillable
@@ -145,54 +166,38 @@ class Backfiller:
             elif unfillable_count == 0:
                 logger.info("No gaps found")
         
-        # PHASE 3: Fill backwards from earliest (get more history)
-        if not days:  # Only do historical backfill if no day limit
-            if earliest_ts:
-                logger.info(f"\n=== Phase 3: Filling backwards from {datetime.fromtimestamp(earliest_ts/1000)} ===")
-                inserted = self._fetch_range(symbol, timeframe, tf_ms, int(datetime(2017, 1, 1).timestamp() * 1000), earliest_ts, "backward")
-                total_inserted += inserted
-                logger.info(f"Phase 3 complete: {inserted} historical candles")
-            else:
-                # No data at all - start from now and work backwards
-                logger.info(f"\n=== No existing data - fetching all available history ===")
-                now = int(datetime.now().timestamp() * 1000)
-                inserted = self._fetch_range(symbol, timeframe, tf_ms, int(datetime(2017, 1, 1).timestamp() * 1000), now, "backward")
-                total_inserted += inserted
-        
-        logger.info(f"\n✅ Backfill complete: {total_inserted} total new candles inserted")
+        logger.info(f"✅ Backfill complete: {total_inserted} total new candles inserted")
     
-    def _fetch_range(self, symbol: str, timeframe: str, tf_ms: int, start_ts: int, end_ts: int, direction: str) -> int:
+    def _fetch_range(self, symbol: str, timeframe: str, tf_ms: int, start_ts: int, end_ts: int) -> int:
         """
-        Fetch data for a specific range.
+        Fetch data for a specific range (backward from end_ts to start_ts).
         
         Args:
             symbol: Trading pair
             timeframe: Candle timeframe
             tf_ms: Timeframe in milliseconds
-            start_ts: Start timestamp
-            end_ts: End timestamp
-            direction: 'forward' or 'backward'
+            start_ts: Start timestamp (target oldest)
+            end_ts: End timestamp (start from here, going backward)
             
         Returns:
             Number of candles inserted
         """
         total_inserted = 0
         consecutive_empty = 0
+        consecutive_no_inserts = 0  # Track batches with 0 inserts
         iterations = 0
         max_iterations = 10000
+        last_oldest_ts = None  # Track last batch's oldest timestamp to detect duplicates
         
-        if direction == "backward":
-            since = end_ts - (1000 * tf_ms)
-        else:
-            since = start_ts
+        # Always start from end_ts and work backward
+        # Start with a reasonable batch size (500 candles back)
+        since = end_ts - (500 * tf_ms)
         
         while iterations < max_iterations:
             iterations += 1
             
-            # Check bounds
-            if direction == "forward" and since >= end_ts:
-                break
-            elif direction == "backward" and since <= start_ts:
+            # Check if we've reached the start
+            if since <= start_ts:
                 break
             
             # Fetch OHLCV data
@@ -211,13 +216,19 @@ class Backfiller:
                 if consecutive_empty >= 3:
                     break
                 
-                if direction == "backward":
-                    since -= (1000 * tf_ms)
-                else:
-                    since += (1000 * tf_ms)
+                # Move backward
+                since -= (1000 * tf_ms)
                 continue
             
             consecutive_empty = 0
+            
+            # Check for duplicate data (reached oldest available)
+            oldest_ts = ohlcv[0][0]
+            if last_oldest_ts is not None and oldest_ts >= last_oldest_ts:
+                # We're getting the same or newer data - no more history available
+                logger.debug(f"Reached oldest available data at {datetime.fromtimestamp(oldest_ts/1000)}")
+                break
+            last_oldest_ts = oldest_ts
             
             # Prepare batch
             batch = []
@@ -244,12 +255,20 @@ class Backfiller:
                 
                 if inserted > 0:
                     logger.info(f"  + {inserted} candles | Range: {datetime.fromtimestamp(batch[0]['timestamp']/1000)} to {datetime.fromtimestamp(batch[-1]['timestamp']/1000)}")
+                    consecutive_no_inserts = 0  # Reset counter on successful insert
+                else:
+                    consecutive_no_inserts += 1
+                    # If we get 3 batches in a row with no inserts, we're in existing data - stop
+                    if consecutive_no_inserts >= 3:
+                        logger.debug(f"Hit existing data (3 consecutive batches with 0 inserts), stopping")
+                        break
             
-            # Move to next position
-            if direction == "backward":
-                since = ohlcv[0][0] - (1000 * tf_ms)
-            else:
-                since = ohlcv[-1][0] + 1
+            # Move to next position - always backward
+            # Calculate next since based on actual data returned to ensure continuous coverage
+            # Step back by the number of candles we just received to maintain pagination
+            oldest_ts = ohlcv[0][0]
+            batch_size = len(ohlcv)
+            since = oldest_ts - (batch_size * tf_ms)
             
             # Rate limiting
             sleep(self.exchange.rateLimit / 1000)
@@ -268,7 +287,7 @@ class Backfiller:
             timeframe = config['timeframe']
             days = config.get('days', 30)
             
-            logger.info(f"\n{'='*60}")
+            logger.info(f"{'='*60}")
             logger.info(f"Backfilling: {symbol} {timeframe}")
             logger.info(f"{'='*60}")
             
