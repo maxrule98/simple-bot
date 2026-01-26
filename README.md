@@ -9,6 +9,7 @@ A modular cryptocurrency trading bot with SQLite storage and CCXT exchange integ
 - 💾 **SQLite database** - Shared persistent storage across all instances
 - 📈 **YAML-based strategies** - Define strategies declaratively without code changes
 - 🔄 **CCXT integration** - Access to 100+ cryptocurrency exchanges
+- 📡 **Real-time streaming** - WebSocket support for OHLCV, ticker, order book, and trades
 - ⚡ **UV package management** - Fast dependency management
 - 🧩 **Modular design** - Clean separation of concerns
 - 🔀 **Horizontal scaling** - Run N trading instances in parallel
@@ -92,6 +93,7 @@ simple-bot/
 │   ├── ARCHITECTURE.md           # Architecture diagrams
 │   ├── DATABASE.md               # Database schema details
 │   ├── WEBSOCKET.md              # WebSocket integration guide
+│   ├── ORDERBOOK.md              # Order book & trade streaming
 │   ├── DATA_STRATEGY.md          # Multi-instance data storage
 │   ├── DATA_FLOW.md              # REST vs WebSocket comparison
 │   └── QUICKSTART.md             # Quick reference
@@ -155,11 +157,14 @@ Reusable, modular components shared across all applications:
 
 #### **WebSocket** (`packages/websocket/`) ✅
 
-- Real-time market data streaming via CCXT Pro
-- Supports OHLCV, ticker, trades, order book streams
-- Stores in same database tables as REST data
-- Will be used by: live trader for sub-second updates
-- Documentation: `docs/WEBSOCKET.md`
+- **Real-time market data streaming** via CCXT Pro
+- **OHLCV updates**: 1m candles forming in real-time
+- **Ticker updates**: Best bid/ask prices, volume
+- **Order Book depth**: Top 10 bid/ask levels with liquidity
+- **Trade stream**: Individual trades for order flow analysis
+- Stores in same database tables as REST data (unified layer)
+- Used by: live trader for sub-second updates
+- Documentation: `docs/WEBSOCKET.md`, `docs/ORDERBOOK.md`
 
 #### **Indicators** (`packages/indicators/`) 📋
 
@@ -270,6 +275,28 @@ ls -lh data/trading.db
 sqlite3 data/trading.db "SELECT COUNT(*) FROM ohlcv_data;"
 ```
 
+#### Test WebSocket Streaming
+
+**Real-time market data:**
+
+```bash
+# Stream OHLCV, ticker, order book, and trades for 30 seconds
+uv run python scripts/test_websocket.py
+
+# Shows:
+# - Live candle updates
+# - Price movements
+# - Order book depth (10 levels)
+# - Individual trade flow
+```
+
+**Check captured data:**
+
+```bash
+sqlite3 data/trading.db "SELECT COUNT(*) FROM orderbook_data;"
+sqlite3 data/trading.db "SELECT COUNT(*) FROM trades_stream;"
+```
+
 ### Future Usage (When Implemented)
 
 **Backtesting:**
@@ -359,6 +386,8 @@ See [docs/DATABASE.md](docs/DATABASE.md) for complete details.
 
 - `ohlcv_data` - Historical price data (shared across all strategies)
 - `ticker_data` - Real-time ticker updates
+- `orderbook_data` - Order book depth snapshots (10 levels)
+- `trades_stream` - Individual trade executions
 - `strategy_metadata` - Strategy configurations
 - `trades` - Executed trades (per strategy)
 - `positions` - Current positions (per strategy)
@@ -379,9 +408,10 @@ Comprehensive documentation in [`docs/`](docs/):
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
 - **[DATABASE.md](docs/DATABASE.md)** - Database schema and strategy
 - **[WEBSOCKET.md](docs/WEBSOCKET.md)** - WebSocket integration for real-time data
+- **[ORDERBOOK.md](docs/ORDERBOOK.md)** - Order book and trade streaming guide
 - **[DATA_STRATEGY.md](docs/DATA_STRATEGY.md)** - Multi-instance data storage approach
 - **[DATA_FLOW.md](docs/DATA_FLOW.md)** - REST vs WebSocket data flow
-- **[QUICKSTART.md](docs/QUICKSTART.md)** - Quick command reference`
+- **[QUICKSTART.md](docs/QUICKSTART.md)** - Quick command reference
 
 ### 2. Docker-First Deployment
 

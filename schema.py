@@ -56,6 +56,60 @@ CREATE_TICKER_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_ticker_lookup ON ticker_data(exchange, symbol, timestamp DESC);",
 ]
 
+CREATE_ORDERBOOK_TABLE = """
+CREATE TABLE IF NOT EXISTS orderbook_data (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exchange TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    
+    -- Top 10 bids/asks (price, amount)
+    bids TEXT NOT NULL,
+    asks TEXT NOT NULL,
+    
+    -- Derived metrics
+    bid_ask_spread REAL,
+    mid_price REAL,
+    
+    created_at INTEGER DEFAULT (strftime('%s', 'now')),
+    
+    UNIQUE(exchange, symbol, timestamp)
+);
+"""
+
+CREATE_ORDERBOOK_INDEXES = [
+    "CREATE INDEX IF NOT EXISTS idx_orderbook_lookup ON orderbook_data(exchange, symbol, timestamp DESC);",
+]
+
+CREATE_TRADES_STREAM_TABLE = """
+CREATE TABLE IF NOT EXISTS trades_stream (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exchange TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    trade_id TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    
+    side TEXT NOT NULL,
+    price REAL NOT NULL,
+    amount REAL NOT NULL,
+    cost REAL NOT NULL,
+    
+    -- Optional fields
+    taker_or_maker TEXT,
+    fee REAL,
+    fee_currency TEXT,
+    
+    created_at INTEGER DEFAULT (strftime('%s', 'now')),
+    
+    UNIQUE(exchange, symbol, trade_id)
+);
+"""
+
+CREATE_TRADES_STREAM_INDEXES = [
+    "CREATE INDEX IF NOT EXISTS idx_trades_stream_lookup ON trades_stream(exchange, symbol, timestamp DESC);",
+    "CREATE INDEX IF NOT EXISTS idx_trades_stream_side ON trades_stream(side, timestamp DESC);",
+]
+
 # =============================================================================
 # STRATEGY & TRADE TABLES (Isolated per strategy instance)
 # =============================================================================
@@ -231,6 +285,8 @@ ALL_TABLES = [
     # Market data
     CREATE_OHLCV_TABLE,
     CREATE_TICKER_TABLE,
+    CREATE_ORDERBOOK_TABLE,
+    CREATE_TRADES_STREAM_TABLE,
     
     # Strategy & trades
     CREATE_STRATEGY_METADATA_TABLE,
@@ -246,6 +302,8 @@ ALL_TABLES = [
 ALL_INDEXES = (
     CREATE_OHLCV_INDEXES +
     CREATE_TICKER_INDEXES +
+    CREATE_ORDERBOOK_INDEXES +
+    CREATE_TRADES_STREAM_INDEXES +
     CREATE_STRATEGY_INDEXES +
     CREATE_TRADES_INDEXES +
     CREATE_POSITIONS_INDEXES +
@@ -308,7 +366,9 @@ if __name__ == "__main__":
     
     print("\n📊 Database schema:")
     print("  - ohlcv_data (market data)")
+    print("  - trades_stream (individual trades)")
     print("  - ticker_data (real-time prices)")
+    print("  - orderbook_data (order book depth)")
     print("  - strategy_metadata (strategy registry)")
     print("  - trades (executed trades)")
     print("  - positions (open positions)")
