@@ -13,6 +13,7 @@ Run for ~30 seconds to see data flowing into database.
 import asyncio
 import sqlite3
 import sys
+import time
 from pathlib import Path
 
 # Add project root to path
@@ -30,6 +31,11 @@ async def main():
     print("=" * 80)
     print()
     
+    # Capture test start time BEFORE starting WebSocket
+    test_start_time = int(time.time())
+    print(f"⏰ Test Start: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(test_start_time))}")
+    print()
+    
     # Configuration
     exchange = 'mexc'
     symbols = ['BTC/USDT']  # Start with one symbol for testing
@@ -39,7 +45,7 @@ async def main():
     print(f"   Exchange: {exchange}")
     print(f"   Symbols: {', '.join(symbols)}")
     print(f"   Duration: {test_duration} seconds")
-    print(f"   Order Book Depth: 10 levels")
+    print(f"   Order Book Depth: full")
     print()
     
     # Connect to database
@@ -51,7 +57,7 @@ async def main():
         exchange_name=exchange,
         symbols=symbols,
         db_connection=conn,
-        orderbook_depth=10
+        orderbook_depth=10000
     )
     
     print("🚀 Starting WebSocket streams...")
@@ -85,36 +91,40 @@ async def main():
     # Query collected data
     cursor = conn.cursor()
     
-    # OHLCV count
+    # Use test_start_time to query ONLY data inserted during this test
+    print(f"🔍 Querying data inserted after: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(test_start_time))}")
+    print()
+    
+    # OHLCV count (timestamps in milliseconds in database)
     cursor.execute("""
         SELECT COUNT(*) FROM ohlcv_data 
         WHERE exchange = ? AND symbol = ? 
-        AND timestamp > strftime('%s', 'now') - 60
-    """, (exchange, symbols[0]))
+        AND timestamp > ?
+    """, (exchange, symbols[0], test_start_time * 1000))
     ohlcv_count = cursor.fetchone()[0]
     
     # Ticker count
     cursor.execute("""
         SELECT COUNT(*) FROM ticker_data 
         WHERE exchange = ? AND symbol = ?
-        AND timestamp > strftime('%s', 'now') - 60
-    """, (exchange, symbols[0]))
+        AND timestamp > ?
+    """, (exchange, symbols[0], test_start_time))
     ticker_count = cursor.fetchone()[0]
     
     # Order book count
     cursor.execute("""
         SELECT COUNT(*) FROM orderbook_data 
         WHERE exchange = ? AND symbol = ?
-        AND timestamp > strftime('%s', 'now') - 60
-    """, (exchange, symbols[0]))
+        AND timestamp > ?
+    """, (exchange, symbols[0], test_start_time))
     orderbook_count = cursor.fetchone()[0]
     
     # Trades count
     cursor.execute("""
         SELECT COUNT(*) FROM trades_stream 
         WHERE exchange = ? AND symbol = ?
-        AND timestamp > strftime('%s', 'now') - 60
-    """, (exchange, symbols[0]))
+        AND timestamp > ?
+    """, (exchange, symbols[0], test_start_time))
     trades_count = cursor.fetchone()[0]
     
     print(f"📊 OHLCV Updates:        {ohlcv_count}")
@@ -138,6 +148,11 @@ async def main():
         timestamp, bids_json, asks_json, spread, mid = latest_ob
         bids = json.loads(bids_json)
         asks = json.loads(asks_json)
+        
+        # MEXC WebSocket returns inverted bid/ask, fix for display
+        if bids and asks and bids[0][0] > asks[0][0]:
+            bids, asks = asks, bids
+            spread = abs(spread)
         
         print(f"📚 Latest Order Book Snapshot:")
         print(f"   Time: {timestamp}")

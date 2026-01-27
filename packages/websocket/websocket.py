@@ -172,10 +172,21 @@ class WebSocketManager:
                 
                 # Store each trade
                 for trade in trades:
+                    # Generate unique trade_id if exchange doesn't provide one
+                    # Use timestamp-price-amount to ensure uniqueness
+                    trade_id = trade.get('id')
+                    if trade_id is None or str(trade_id) == '' or str(trade_id) == 'None':
+                        timestamp_ms = int(trade.get('timestamp', time.time() * 1000))
+                        price = float(trade.get('price', 0))
+                        amount = float(trade.get('amount', 0))
+                        trade_id = f"{timestamp_ms}-{price:.8f}-{amount:.8f}"
+                    else:
+                        trade_id = str(trade_id)
+                    
                     self._store_trade(
                         exchange=self.exchange_name,
                         symbol=trade.get('symbol', symbol),
-                        trade_id=str(trade.get('id', '')),
+                        trade_id=trade_id,
                         timestamp=int(trade.get('timestamp', time.time() * 1000) / 1000),
                         side=trade.get('side', 'unknown'),
                         price=trade.get('price', 0),
@@ -217,6 +228,14 @@ class WebSocketManager:
                 if bids and asks:
                     best_bid = bids[0][0]  # [price, amount]
                     best_ask = asks[0][0]
+                    
+                    # Sanity check: best ask should be >= best bid
+                    # If not, the exchange might have inverted the arrays
+                    if best_ask < best_bid:
+                        # Swap bids and asks
+                        bids, asks = asks, bids
+                        best_bid, best_ask = best_ask, best_bid
+                    
                     mid_price = (best_bid + best_ask) / 2
                     bid_ask_spread = best_ask - best_bid
                 
@@ -336,7 +355,8 @@ class WebSocketManager:
             fee_currency: Fee currency
         """
         try:
-            self.db.execute("""
+            cursor = self.db.cursor()
+            cursor.execute("""
                 INSERT OR IGNORE INTO trades_stream
                 (exchange, symbol, trade_id, timestamp, side, price, amount, cost, 
                  taker_or_maker, fee, fee_currency)
@@ -345,7 +365,7 @@ class WebSocketManager:
                   taker_or_maker, fee, fee_currency))
             self.db.commit()
         except Exception as e:
-            print(f"❌ Error storing trade: {e}")
+            self.logger.error(f"Error storing trade: {e}")
             
     async def start(self, enable_orderbook: bool = True, enable_trades: bool = False):
         """
