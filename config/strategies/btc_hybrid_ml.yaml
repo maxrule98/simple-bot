@@ -1,0 +1,49 @@
+# Hybrid ML + Technical Strategy
+# Combines ML price prediction with RSI and moving averages
+
+strategy:
+  id: "btc-hybrid-ml-001"
+  name: "BTC Hybrid ML + Technical"
+
+market:
+  exchange: "mexc"
+  symbol: "BTC/USDT"
+  primary_timeframe: "1m"
+  timeframes:
+    - "1m"
+
+# Indicators to calculate
+indicators:
+  - name: "PRICE_PREDICTION"
+    params:
+      lookback: 20 # More data for better prediction
+      horizon: 5
+  - name: "RSI"
+    params:
+      period: 14
+  - name: "EMA"
+    params:
+      period: 20
+
+# Entry conditions - All must be true (strong confirmation)
+entry:
+  mode: "AND"
+  conditions:
+    - "PRICE_PREDICTION > PRICE" # ML predicts upward movement
+    - "RSI < 60" # Not overbought
+    - "PRICE > EMA" # Price above trend (bullish)
+
+# Exit conditions - Any can trigger
+exit:
+  mode: "OR"
+  conditions:
+    - "PRICE_PREDICTION < PRICE" # ML predicts reversal
+    - "RSI > 75" # Extremely overbought
+    - "PRICE < EMA" # Price drops below trend
+    - "PNL_PCT < -1.0" # Stop loss
+    - "PNL_PCT > 2.0" # Take profit
+
+# Risk management
+risk:
+  position_size_pct: 2.5 # More confident with multiple confirmations
+  stop_loss_pct: 1.0

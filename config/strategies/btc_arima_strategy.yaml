@@ -1,0 +1,30 @@
+strategy:
+  name: "BTC ARIMA Time Series"
+  exchange: "binance"
+  symbol: "BTC/USDT"
+  timeframe: "1h"
+  description: "Pure ARIMA autoregressive prediction strategy"
+
+indicators:
+  - name: "ARIMA_PREDICTION"
+    params:
+      order: [1, 1, 1] # ARIMA(p,d,q)
+      horizon: 3
+
+entry:
+  long:
+    conditions:
+      - "ARIMA_PREDICTION > PRICE * 1.005" # Predict >0.5% increase
+    reason: "ARIMA predicts {ARIMA_PREDICTION:.2f} ({((ARIMA_PREDICTION/PRICE - 1) * 100):.2f}% upside)"
+
+exit:
+  long:
+    conditions:
+      - "ARIMA_PREDICTION < PRICE * 0.995" # Predict >0.5% decrease
+      - "PNL_PCT > 2.0" # Take profit at +2%
+    reason: "ARIMA predicts decline to {ARIMA_PREDICTION:.2f} or profit target hit"
+
+risk:
+  position_size_pct: 10 # 10% of portfolio per trade
+  stop_loss_pct: 2.0 # -2% stop loss
+  take_profit_pct: 5.0 # +5% take profit

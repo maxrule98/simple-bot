@@ -9,7 +9,12 @@ from packages.strategies.condition_evaluator import ConditionEvaluator
 from packages.signals.types import Signal, SignalType, SignalSource
 from packages.database.db import DatabaseManager
 from packages.execution.manager import ExecutionManager
-from packages.indicators.conventional import calculate_rsi, calculate_sma, calculate_ema
+from packages.indicators import calculate_rsi, calculate_sma, calculate_ema
+from packages.ML import (
+    calculate_price_prediction,
+    calculate_arima_prediction,
+    calculate_random_forest_prediction
+)
 
 
 class YAMLStrategy(BaseStrategy):
@@ -151,6 +156,24 @@ class YAMLStrategy(BaseStrategy):
                 self.indicators['SMA'] = calculate_sma(df, params.get('period', 20))
             elif name == "EMA":
                 self.indicators['EMA'] = calculate_ema(df, params.get('period', 20))
+            elif name == "PRICE_PREDICTION":
+                self.indicators['PRICE_PREDICTION'] = calculate_price_prediction(
+                    df, 
+                    lookback=params.get('lookback', 10),
+                    horizon=params.get('horizon', 3)
+                )
+            elif name == "ARIMA_PREDICTION":
+                self.indicators['ARIMA_PREDICTION'] = calculate_arima_prediction(
+                    df,
+                    order=tuple(params.get('order', [1, 1, 1])),
+                    horizon=params.get('horizon', 3)
+                )
+            elif name == "RF_PREDICTION":
+                self.indicators['RF_PREDICTION'] = calculate_random_forest_prediction(
+                    df,
+                    n_estimators=params.get('n_estimators', 10),
+                    horizon=params.get('horizon', 3)
+                )
             # TODO: Add more indicators (MACD, Bollinger Bands, ATR, etc.)
     
     def _build_context(self, candle: Dict) -> Dict[str, float]:

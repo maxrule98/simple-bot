@@ -1,0 +1,48 @@
+strategy:
+  name: "BTC ML Ensemble Consensus"
+  exchange: "binance"
+  symbol: "BTC/USDT"
+  timeframe: "1h"
+  description: "Multi-model consensus using ARIMA + RF + Statistical predictor"
+
+indicators:
+  - name: "PRICE_PREDICTION"
+    params:
+      lookback: 10
+      horizon: 3
+  - name: "ARIMA_PREDICTION"
+    params:
+      order: [1, 1, 1]
+      horizon: 3
+  - name: "RF_PREDICTION"
+    params:
+      n_estimators: 10
+      horizon: 3
+  - name: "RSI"
+    params:
+      period: 14
+
+entry:
+  long:
+    conditions:
+      # All 3 models must agree on upside
+      - "PRICE_PREDICTION > PRICE * 1.005"
+      - "ARIMA_PREDICTION > PRICE * 1.003"
+      - "RF_PREDICTION > PRICE * 1.003"
+      # Plus technical confirmation
+      - "RSI < 50" # Not overbought
+    reason: "ML Consensus: PRICE_PRED={PRICE_PREDICTION:.0f}, ARIMA={ARIMA_PREDICTION:.0f}, RF={RF_PREDICTION:.0f} (all bullish + RSI={RSI:.1f})"
+
+exit:
+  long:
+    conditions:
+      # Any 2 models predict decline
+      - "(PRICE_PREDICTION < PRICE * 0.998 and ARIMA_PREDICTION < PRICE * 0.998) or (PRICE_PREDICTION < PRICE * 0.998 and RF_PREDICTION < PRICE * 0.998) or (ARIMA_PREDICTION < PRICE * 0.998 and RF_PREDICTION < PRICE * 0.998)"
+      - "PNL_PCT > 3.0" # Take profit at +3%
+      - "RSI > 75" # Overbought exit
+    reason: "ML Consensus bearish or profit target hit (RSI={RSI:.1f}, PNL={PNL_PCT:.2f}%)"
+
+risk:
+  position_size_pct: 15 # 15% of portfolio (higher confidence with consensus)
+  stop_loss_pct: 1.5 # -1.5% stop loss (tighter with ML signals)
+  take_profit_pct: 5.0 # +5% take profit

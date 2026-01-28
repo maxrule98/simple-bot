@@ -1,0 +1,43 @@
+# ML Price Prediction Strategy
+# Uses momentum-based price prediction to enter trades
+
+strategy:
+  id: "btc-ml-prediction-001"
+  name: "BTC ML Price Prediction"
+
+market:
+  exchange: "mexc"
+  symbol: "BTC/USDT"
+  primary_timeframe: "1m"
+  timeframes:
+    - "1m"
+
+# Indicators to calculate
+indicators:
+  - name: "PRICE_PREDICTION"
+    params:
+      lookback: 15 # Analyze last 15 candles
+      horizon: 5 # Predict 5 candles ahead
+  - name: "RSI"
+    params:
+      period: 14
+
+# Entry conditions - Buy when model predicts price increase
+entry:
+  mode: "AND"
+  conditions:
+    - "PRICE_PREDICTION > PRICE" # Predicted price higher than current
+    - "RSI < 70" # Not overbought (confirmation)
+
+# Exit conditions
+exit:
+  mode: "OR"
+  conditions:
+    - "PRICE_PREDICTION < PRICE" # Model predicts price will drop
+    - "PNL_PCT < -0.8" # Tight stop loss (ML should be accurate)
+    - "PNL_PCT > 1.0" # Take profit at 1%
+
+# Risk management
+risk:
+  position_size_pct: 2.0
+  stop_loss_pct: 0.8
