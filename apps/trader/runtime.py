@@ -13,6 +13,7 @@ from packages.logging.logger import setup_logger
 from packages.strategies.base import BaseStrategy
 from packages.strategies.loader import StrategyLoader
 from packages.websocket.websocket import WebSocketManager
+from apps.backfiller.main import Backfiller
 
 # Load environment variables from .env file
 load_dotenv()
@@ -90,6 +91,17 @@ class TradingRuntime:
         db_path = os.getenv("DATABASE_PATH", "data/trading.db")
         self.db = DatabaseManager(db_path)
         self.logger.info(f"Connected to database: {db_path}")
+
+        # Backfill historical data before strategy warmup
+        self.logger.info(f"Backfilling historical data for {symbol}...")
+        try:
+            backfiller = Backfiller(exchange)
+            for timeframe in timeframes:
+                await backfiller.backfill(symbol, timeframe)
+            self.logger.info("✅ Backfill complete")
+        except Exception as e:
+            self.logger.warning(f"⚠️ Backfill failed (non-critical): {e}")
+            self.logger.info("Proceeding with warmup using existing database data...")
 
         # Initialize execution manager
         self.execution = ExecutionManager(

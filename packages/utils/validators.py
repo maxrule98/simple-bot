@@ -308,3 +308,32 @@ def is_valid_indicator_name(name: str) -> bool:
     
     # Uppercase letters, numbers, underscores
     return bool(re.match(r'^[A-Z_][A-Z0-9_]*$', name))
+
+def normalize_timestamp(timestamp: int) -> int:
+    """
+    Normalize timestamp to milliseconds.
+    
+    Args:
+        timestamp: Unix timestamp (seconds or milliseconds)
+        
+    Returns:
+        Timestamp in milliseconds (always 13 digits)
+        
+    Raises:
+        ValueError: If timestamp is invalid
+    """
+    if not isinstance(timestamp, (int, float)):
+        raise ValueError(f"Timestamp must be numeric, got {type(timestamp)}")
+    
+    timestamp = int(timestamp)
+    
+    if timestamp < 0:
+        raise ValueError(f"Timestamp cannot be negative: {timestamp}")
+    
+    # If timestamp is 10 digits or less, it's in seconds - convert to milliseconds
+    # Threshold: 10^11 milliseconds = ~3170 years (well beyond BTC era)
+    if timestamp < 100_000_000_000:  # Less than 10^11
+        return timestamp * 1000
+    
+    # Already in milliseconds
+    return timestamp

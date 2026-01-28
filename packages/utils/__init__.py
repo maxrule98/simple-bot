@@ -12,6 +12,7 @@ from packages.utils.validators import (
     sanitize_exchange,
     validate_candle_data,
     is_valid_indicator_name,
+    normalize_timestamp,
 )
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "sanitize_exchange",
     "validate_candle_data",
     "is_valid_indicator_name",
+    "normalize_timestamp",
 ]
