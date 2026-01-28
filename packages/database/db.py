@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from packages.logging.logger import setup_logger
+from packages.database import queries
 
 # Get project root (2 levels up from this file)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
