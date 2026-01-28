@@ -1,0 +1,42 @@
+# Trend Following Strategy using Moving Averages
+# Buy when price crosses above moving average, sell when crosses below
+
+strategy:
+  id: "btc-ma-cross-001"
+  name: "BTC Moving Average Crossover"
+
+market:
+  exchange: "mexc"
+  symbol: "BTC/USDT"
+  primary_timeframe: "1m"
+  timeframes:
+    - "1m"
+
+# Indicators to calculate
+indicators:
+  - name: "SMA"
+    params:
+      period: 20
+  - name: "EMA"
+    params:
+      period: 10
+
+# Entry conditions - Price above both MAs (uptrend)
+entry:
+  mode: "AND"
+  conditions:
+    - "PRICE > SMA" # Price above slow MA
+    - "EMA > SMA" # Fast MA above slow MA (momentum)
+
+# Exit conditions
+exit:
+  mode: "OR"
+  conditions:
+    - "PRICE < EMA" # Price crosses below fast MA
+    - "PNL_PCT < -0.5" # Tight stop (trend following)
+    - "PNL_PCT > 1.5" # Take profit at 1.5%
+
+# Risk management
+risk:
+  position_size_pct: 3.0 # Larger position (trend following)
+  stop_loss_pct: 0.5

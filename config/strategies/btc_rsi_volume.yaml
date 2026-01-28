@@ -1,0 +1,41 @@
+# RSI + Volume Confirmation Strategy
+# Requires volume spike to confirm entry signal
+
+strategy:
+  id: "btc-rsi-volume-001"
+  name: "BTC RSI with Volume Confirmation"
+
+market:
+  exchange: "mexc"
+  symbol: "BTC/USDT"
+  primary_timeframe: "1m"
+  timeframes:
+    - "1m"
+
+# Indicators to calculate
+indicators:
+  - name: "RSI"
+    params:
+      period: 14
+  - name: "SMA"
+    params:
+      period: 20
+
+# Entry conditions - RSI oversold + volume > average
+entry:
+  mode: "AND"
+  conditions:
+    - "RSI < 30" # Oversold
+    - "VOLUME > SMA" # Volume above 20-period average (using price SMA as proxy)
+
+# Exit conditions
+exit:
+  mode: "OR"
+  conditions:
+    - "RSI > 70"
+    - "PNL_PCT < -1.0"
+
+# Risk management
+risk:
+  position_size_pct: 2.5 # Slightly larger (more confident with volume)
+  stop_loss_pct: 1.0

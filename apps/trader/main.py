@@ -1,1 +1,8 @@
-# This is the trader module responsible for live trading operations. Backtesting and live should share as much code as possible to ensure consistency between simulated and real trades.
+"""Main entry point for trader application."""
+
+import asyncio
+
+from apps.trader.runtime import main
+
+if __name__ == "__main__":
+    asyncio.run(main())

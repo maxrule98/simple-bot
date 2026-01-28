@@ -401,3 +401,37 @@ class DatabaseManager:
                 logger.debug(f"Marked gap as unfillable: {exchange} {symbol} {timeframe} {gap_start} -> {gap_end}")
         except sqlite3.Error as e:
             logger.error(f"Failed to mark unfillable gap: {e}")
+
+    def execute(self, query: str, params: tuple = ()) -> None:
+        """
+        Execute a query (INSERT, UPDATE, DELETE).
+        
+        Args:
+            query: SQL query string
+            params: Query parameters tuple
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            conn.commit()
+
+    def query(self, query: str, params: tuple = ()) -> List[tuple]:
+        """
+        Execute a SELECT query and return results.
+        
+        Args:
+            query: SQL query string
+            params: Query parameters tuple
+            
+        Returns:
+            List of result tuples
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            return cursor.fetchall()
+
+    def close(self):
+        """Close database connections (no-op for context manager pattern)."""
+        pass
+

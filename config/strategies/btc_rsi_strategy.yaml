@@ -1,0 +1,38 @@
+# BTC RSI Mean Reversion Strategy Configuration
+# YAML-first: No Python class needed - conditions drive the strategy
+
+strategy:
+  id: "btc-rsi-001"
+  name: "BTC RSI Mean Reversion"
+  # No "class" field = uses YAMLStrategy by default
+
+market:
+  exchange: "mexc"
+  symbol: "BTC/USDT"
+  primary_timeframe: "1m"
+  timeframes:
+    - "1m"
+
+# Indicators to calculate
+indicators:
+  - name: "RSI"
+    params:
+      period: 14
+
+# Entry conditions (all must be true by default)
+entry:
+  mode: "AND" # ALL conditions must be true
+  conditions:
+    - "RSI < 30" # RSI oversold
+
+# Exit conditions (any can trigger exit)
+exit:
+  mode: "OR" # ANY condition triggers exit
+  conditions:
+    - "RSI > 70" # RSI overbought
+    - "PNL_PCT < -1.0" # Stop loss at -1%
+
+# Risk management
+risk:
+  position_size_pct: 2.0 # 2% of account per trade
+  stop_loss_pct: 1.0

@@ -30,6 +30,8 @@ from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import time
 
+from packages.logging.logger import setup_logger
+
 # Get project root (2 levels up from this file)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -63,6 +65,8 @@ class WebSocketManager:
         self.orderbook_depth = orderbook_depth
         self.exchange = None
         self.running = False
+        self.candle_callback = None  # Optional callback for candle updates
+        self.logger = setup_logger(f"websocket.{exchange_name}")
         
     async def connect(self):
         """Establish websocket connection to exchange."""
@@ -72,6 +76,15 @@ class WebSocketManager:
             # API keys loaded from environment if needed
         })
         print(f"✅ WebSocket connected to {self.exchange_name}")
+        
+    def register_candle_callback(self, callback):
+        """
+        Register callback for candle updates.
+        
+        Args:
+            callback: Async function(candle: Dict, timeframe: str)
+        """
+        self.candle_callback = callback
         
     async def watch_ohlcv(self, symbol: str, timeframe: str = '1m'):
         """
@@ -107,6 +120,18 @@ class WebSocketManager:
                         close=close,
                         volume=volume
                     )
+                    
+                    # Call registered callback if exists
+                    if self.candle_callback:
+                        candle = {
+                            "timestamp": timestamp,
+                            "open": open_price,
+                            "high": high,
+                            "low": low,
+                            "close": close,
+                            "volume": volume,
+                        }
+                        await self.candle_callback(candle, timeframe)
                     
             except Exception as e:
                 print(f"❌ Error watching OHLCV {symbol}: {e}")
@@ -268,9 +293,8 @@ class WebSocketManager:
                 (exchange, symbol, timeframe, timestamp, open, high, low, close, volume)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (exchange, symbol, timeframe, timestamp, open, high, low, close, volume))
-            self.db.commit()
         except Exception as e:
-            print(f"❌ Error storing OHLCV: {e}")
+            self.logger.error(f"Error storing OHLCV: {e}")
             
     def _store_ticker(self, exchange: str, symbol: str, timestamp: int,
                       bid: float, ask: float, last: float, volume_24h: float):
@@ -281,9 +305,8 @@ class WebSocketManager:
                 (exchange, symbol, timestamp, bid, ask, last, volume_24h)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (exchange, symbol, timestamp, bid, ask, last, volume_24h))
-            self.db.commit()
         except Exception as e:
-            print(f"❌ Error storing ticker: {e}")
+            self.logger.error(f"Error storing ticker: {e}")
             
     def _store_orderbook(
         self, 
@@ -320,9 +343,8 @@ class WebSocketManager:
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (exchange, symbol, timestamp, bids_json, asks_json, 
                   bid_ask_spread, mid_price))
-            self.db.commit()
         except Exception as e:
-            print(f"❌ Error storing order book: {e}")
+            self.logger.error(f"Error storing order book: {e}")
             
     def _store_trade(
         self,
@@ -355,15 +377,13 @@ class WebSocketManager:
             fee_currency: Fee currency
         """
         try:
-            cursor = self.db.cursor()
-            cursor.execute("""
+            self.db.execute("""
                 INSERT OR IGNORE INTO trades_stream
                 (exchange, symbol, trade_id, timestamp, side, price, amount, cost, 
                  taker_or_maker, fee, fee_currency)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (exchange, symbol, trade_id, timestamp, side, price, amount, cost,
                   taker_or_maker, fee, fee_currency))
-            self.db.commit()
         except Exception as e:
             self.logger.error(f"Error storing trade: {e}")
             

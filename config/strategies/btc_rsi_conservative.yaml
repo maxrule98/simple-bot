@@ -1,0 +1,37 @@
+# Conservative RSI Strategy
+# Higher thresholds = fewer trades, but potentially better quality
+
+strategy:
+  id: "btc-rsi-conservative-001"
+  name: "BTC RSI Conservative"
+
+market:
+  exchange: "mexc"
+  symbol: "BTC/USDT"
+  primary_timeframe: "1m"
+  timeframes:
+    - "1m"
+
+# Indicators to calculate
+indicators:
+  - name: "RSI"
+    params:
+      period: 14
+
+# Entry conditions - Very oversold
+entry:
+  mode: "AND"
+  conditions:
+    - "RSI < 20" # More oversold than standard 30
+
+# Exit conditions
+exit:
+  mode: "OR"
+  conditions:
+    - "RSI > 80" # More overbought than standard 70
+    - "PNL_PCT < -1.5" # Wider stop loss
+
+# Risk management
+risk:
+  position_size_pct: 1.0 # Smaller position (1% vs 2%)
+  stop_loss_pct: 1.5

@@ -208,11 +208,12 @@ CREATE TABLE IF NOT EXISTS signals (
     strategy_id TEXT NOT NULL,
     exchange TEXT NOT NULL,
     symbol TEXT NOT NULL,
-    timeframe TEXT NOT NULL,
     
     signal_type TEXT NOT NULL,
+    signal_source TEXT NOT NULL,
     confidence REAL,
-    indicators TEXT,
+    reason TEXT,
+    metadata TEXT,
     
     executed BOOLEAN DEFAULT 0,
     trade_id INTEGER,
