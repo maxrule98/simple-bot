@@ -1,7 +1,9 @@
 """Condition evaluator for YAML-driven strategies."""
 
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Union
+import pandas as pd
+import numpy as np
 
 
 class ConditionEvaluator:
@@ -15,6 +17,7 @@ class ConditionEvaluator:
     - PNL_PCT < -1.0
     
     Operators: <, >, <=, >=, ==, !=
+    Logical operators: AND, OR
     """
     
     OPERATORS = {
@@ -26,29 +29,51 @@ class ConditionEvaluator:
         '!=': lambda a, b: a != b,
     }
     
-    def __init__(self, indicators: Dict[str, Any], context: Dict[str, Any]):
+    def __init__(self, indicators: Dict[str, Any], context: Optional[Dict[str, Any]] = None):
         """
         Initialize evaluator with available indicators and context.
         
         Args:
-            indicators: Dict of indicator_name -> current_value
+            indicators: Dict of indicator_name -> current_value or Series
             context: Additional context (position, pnl, price, etc.)
         """
         self.indicators = indicators
-        self.context = context
+        self.context = context or {}
+        self.data = None
         
-    def evaluate(self, condition: str) -> bool:
+    def evaluate(self, condition: str, data: Optional[Dict[str, pd.Series]] = None) -> Union[bool, pd.Series]:
         """
         Evaluate a condition string.
         
         Args:
-            condition: Condition string (e.g., "RSI < 30")
+            condition: Condition string (e.g., "RSI < 30" or "RSI < 30 AND PRICE > SMA")
+            data: Optional DataFrame columns for element-wise evaluation
             
         Returns:
-            True if condition is satisfied, False otherwise
+            If data provided: pandas Series of bool values (element-wise evaluation)
+            If no data: bool value (scalar evaluation)
         """
-        # Parse condition
-        match = re.match(r'^\s*([A-Z_]+)\s*([<>=!]+)\s*(.+)\s*$', condition)
+        self.data = data
+        
+        # Handle AND/OR operators
+        if ' AND ' in condition:
+            parts = condition.split(' AND ')
+            result = self.evaluate(parts[0].strip(), data)
+            for part in parts[1:]:
+                part_result = self.evaluate(part.strip(), data)
+                result = result & part_result if isinstance(result, pd.Series) else (result and part_result)
+            return result
+        
+        if ' OR ' in condition:
+            parts = condition.split(' OR ')
+            result = self.evaluate(parts[0].strip(), data)
+            for part in parts[1:]:
+                part_result = self.evaluate(part.strip(), data)
+                result = result | part_result if isinstance(result, pd.Series) else (result or part_result)
+            return result
+        
+        # Parse simple condition
+        match = re.match(r'^\s*([A-Za-z_]+[A-Za-z0-9_]*)\s*([<>=!]+)\s*(.+)\s*$', condition.strip())
         if not match:
             raise ValueError(f"Invalid condition format: {condition}")
         
@@ -59,10 +84,19 @@ class ConditionEvaluator:
         # Get left value
         left_val = self._get_value(left_var)
         if left_val is None:
-            return False  # Variable not available
+            if self.data:
+                # Return Series of False with same length as data
+                length = len(next(iter(self.data.values())))
+                return pd.Series([False] * length)
+            return False
         
         # Get right value
         right_val = self._get_value(right_value)
+        if right_val is None:
+            if self.data:
+                length = len(next(iter(self.data.values())))
+                return pd.Series([False] * length)
+            return False
         
         # Evaluate comparison
         if operator not in self.OPERATORS:
@@ -101,7 +135,7 @@ class ConditionEvaluator:
             var: Variable name or literal value
             
         Returns:
-            Variable value or parsed literal
+            Variable value (scalar, Series, or parsed literal)
         """
         # Check if it's a literal number
         try:
@@ -113,13 +147,25 @@ class ConditionEvaluator:
         if var.startswith('"') or var.startswith("'"):
             return var.strip('"\'')
         
+        # Check data (Series) first if data provided
+        if self.data and var in self.data:
+            return self.data[var]
+        
         # Check indicators
         if var in self.indicators:
-            return self.indicators[var]
+            value = self.indicators[var]
+            # If we have data context, try to get from data instead
+            if self.data and var in self.data:
+                return self.data[var]
+            return value
         
         # Check context
         if var in self.context:
-            return self.context[var]
+            value = self.context[var]
+            # If we have data context, try to get from data instead
+            if self.data and var in self.data:
+                return self.data[var]
+            return value
         
         # Not found
         return None
