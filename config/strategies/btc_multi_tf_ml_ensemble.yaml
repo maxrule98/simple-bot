@@ -1,0 +1,203 @@
+# Multi-Timeframe ML Strategy
+# Combines ML predictions across multiple timeframes for robust signals
+#
+# Strategy Logic:
+# - Short-term ML (1m): Fast price predictions for entry timing
+# - Medium-term ML (5m): Primary trend prediction
+# - Long-term ML (15m): Major trend confirmation
+# - Technical filters: RSI and EMA for additional confirmation
+#
+# Entry: All ML models across timeframes must agree on direction
+# Exit: Any timeframe ML model predicts reversal
+
+strategy:
+  id: "btc-multi-tf-ml-001"
+  name: "BTC Multi-Timeframe ML Ensemble"
+
+market:
+  exchange: "mexc"
+  symbol: "BTC/USDT"
+  primary_timeframe: "5m" # Main decision timeframe
+  timeframes:
+    - "1m" # Fast ML predictions
+    - "5m" # Primary ML analysis
+    - "15m" # Long-term ML trend
+
+# ML Models calculated on multiple timeframes
+indicators:
+  # Price prediction (momentum-based) on all 3 timeframes
+  - name: "PRICE_PREDICTION"
+    params:
+      lookback: 20
+      horizon: 5
+    timeframes: ["1m", "5m", "15m"]
+
+  # ARIMA (time series) on medium/long timeframes
+  - name: "ARIMA_PREDICTION"
+    params:
+      order: [1, 1, 1]
+      horizon: 3
+    timeframes: ["5m", "15m"]
+
+  # Random Forest (pattern recognition) on primary timeframe only
+  - name: "RF_PREDICTION"
+    params:
+      n_estimators: 10
+      horizon: 3
+    timeframes: ["5m"]
+
+  # Technical indicators for filtering
+  - name: "RSI"
+    params:
+      period: 14
+    timeframes: ["5m", "15m"]
+
+  - name: "EMA"
+    params:
+      period: 20
+    timeframes: ["15m"]
+
+# Entry: Multi-timeframe ML consensus (all models must agree)
+entry:
+  mode: "AND"
+  conditions:
+    # === SHORT-TERM PREDICTION (1m) ===
+    # Fast momentum predicts upward movement
+    - "PRICE_PREDICTION_1m > PRICE"
+
+    # === MEDIUM-TERM PREDICTIONS (5m) ===
+    # Primary timeframe - all 3 models must agree
+    - "PRICE_PREDICTION_5m > PRICE * 1.003" # At least +0.3% predicted
+    - "ARIMA_PREDICTION_5m > PRICE * 1.002" # ARIMA also bullish
+    - "RF_PREDICTION_5m > PRICE * 1.002" # Random Forest confirms
+
+    # === LONG-TERM PREDICTION (15m) ===
+    # Higher timeframe trend alignment
+    - "PRICE_PREDICTION_15m > PRICE"
+    - "ARIMA_PREDICTION_15m > PRICE"
+
+    # === TECHNICAL FILTERS ===
+    # Not overbought on any timeframe
+    - "RSI_5m < 65"
+    - "RSI_15m < 70"
+
+    # Price above long-term trend
+    - "PRICE > EMA_15m"
+
+    # === STRENGTH CHECK ===
+    # 1m prediction should be more bullish than 5m (momentum building)
+    - "PRICE_PREDICTION_1m > PRICE_PREDICTION_5m"
+
+# Exit: Any ML model predicts reversal OR technical signals trigger
+exit:
+  mode: "OR"
+  conditions:
+    # === ML REVERSAL SIGNALS ===
+    # Any medium-term model predicts decline
+    - "PRICE_PREDICTION_5m < PRICE * 0.997" # Momentum model bearish
+    - "ARIMA_PREDICTION_5m < PRICE * 0.998" # ARIMA bearish
+    - "RF_PREDICTION_5m < PRICE * 0.998" # Random Forest bearish
+
+    # Long-term model predicts decline (major reversal)
+    - "PRICE_PREDICTION_15m < PRICE"
+
+    # === MOMENTUM WEAKENING ===
+    # Short-term less bullish than medium-term (momentum fading)
+    - "PRICE_PREDICTION_1m < PRICE_PREDICTION_5m"
+
+    # === TECHNICAL EXITS ===
+    # Overbought on primary timeframe
+    - "RSI_5m > 75"
+
+    # Lost long-term trend support
+    - "PRICE < EMA_15m"
+
+    # === RISK MANAGEMENT ===
+    - "PNL_PCT < -1.2" # Stop loss (wider for ML strategies)
+    - "PNL_PCT > 3.0" # Take profit (let ML winners run)
+
+# Risk management
+risk:
+  position_size_pct: 3.0 # Higher confidence with multi-TF ML consensus
+  stop_loss_pct: 1.2 # Wider stop (ML needs room to work)
+
+
+# ============================================================================
+# EXPLANATION: How Multi-Timeframe ML Works
+# ============================================================================
+#
+# 1. DATA COLLECTION:
+#    - Each timeframe streams independently via WebSocket
+#    - 1m candles: arrive every minute
+#    - 5m candles: arrive every 5 minutes
+#    - 15m candles: arrive every 15 minutes
+#
+# 2. ML CALCULATION:
+#    - PRICE_PREDICTION_1m uses last 20 × 1m candles (20 minutes of data)
+#    - PRICE_PREDICTION_5m uses last 20 × 5m candles (100 minutes of data)
+#    - PRICE_PREDICTION_15m uses last 20 × 15m candles (300 minutes of data)
+#
+# 3. PREDICTION HORIZON:
+#    - PRICE_PREDICTION_1m predicts 5 minutes ahead (5 × 1m candles)
+#    - PRICE_PREDICTION_5m predicts 25 minutes ahead (5 × 5m candles)
+#    - PRICE_PREDICTION_15m predicts 75 minutes ahead (5 × 15m candles)
+#
+# 4. AVAILABLE INDICATORS:
+#    After calculation, you can reference:
+#    - PRICE_PREDICTION_1m, PRICE_PREDICTION_5m, PRICE_PREDICTION_15m
+#    - ARIMA_PREDICTION_5m, ARIMA_PREDICTION_15m
+#    - RF_PREDICTION_5m
+#    - RSI_5m, RSI_15m
+#    - EMA_15m
+#    - PRICE (current price from primary_timeframe)
+#    - VOLUME (current volume from primary_timeframe)
+#
+# 5. SIGNAL GENERATION:
+#    - Signals ONLY generated when primary_timeframe (5m) candle arrives
+#    - At that moment, ALL timeframe indicators are fresh and available
+#    - Entry checks all conditions across all timeframes
+#    - If ALL conditions true → BUY signal generated
+#
+# 6. WHY THIS WORKS:
+#    - Short-term ML: Catches immediate momentum shifts
+#    - Medium-term ML: Main trend prediction with multiple models
+#    - Long-term ML: Filters out counter-trend moves
+#    - Consensus requirement: Reduces false signals dramatically
+#    - Technical filters: Prevents entries at extremes
+#
+# 7. PERFORMANCE NOTES:
+#    - More ML models = more computation
+#    - Each model needs minimum data before predictions are reliable:
+#      * PRICE_PREDICTION: ~20 candles
+#      * ARIMA_PREDICTION: ~30 candles
+#      * RF_PREDICTION: ~50 candles for training
+#    - Allow time for higher timeframes to accumulate data:
+#      * 5m ready after ~2 hours (20 × 5m = 100 min)
+#      * 15m ready after ~5 hours (20 × 15m = 300 min)
+#
+# 8. OPTIMIZATION TIPS:
+#    - Backtest to find optimal lookback periods per timeframe
+#    - Adjust prediction horizons based on holding time preference
+#    - Consider weighting: higher TF predictions could require stronger signals
+#    - Example: "PRICE_PREDICTION_15m > PRICE * 1.005" (0.5% required on 15m)
+#
+# 9. COMMON PATTERNS:
+#
+#    Pattern 1: Cascade Confirmation
+#    - "PRICE_PREDICTION_1m > PRICE"
+#    - "PRICE_PREDICTION_5m > PRICE_PREDICTION_1m"
+#    - "PRICE_PREDICTION_15m > PRICE_PREDICTION_5m"
+#    (Each higher TF predicts even higher prices = strong trend)
+#
+#    Pattern 2: Divergence Detection
+#    - "PRICE_PREDICTION_1m > PRICE"  # Short-term bullish
+#    - "PRICE_PREDICTION_15m < PRICE" # Long-term bearish
+#    (Trade short-term moves against long-term trend = counter-trend scalping)
+#
+#    Pattern 3: Model Consensus
+#    - "PRICE_PREDICTION_5m > PRICE"
+#    - "ARIMA_PREDICTION_5m > PRICE"
+#    - "RF_PREDICTION_5m > PRICE"
+#    (All models on same TF agree = high confidence)
+#
+# ============================================================================

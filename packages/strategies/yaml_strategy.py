@@ -62,13 +62,17 @@ class YAMLStrategy(BaseStrategy):
         # Update history
         self.update_history(candle, timeframe)
         
-        # Get history for primary timeframe
-        history = self.history.get(self.primary_timeframe, [])
-        if len(history) < 2:
+        # Only process on primary timeframe to avoid duplicate signals
+        # (All timeframes are analyzed, but signals only generated on primary)
+        if timeframe != self.primary_timeframe:
+            return
+        
+        # Check we have minimum data on primary timeframe
+        if len(self.history.get(self.primary_timeframe, [])) < 2:
             return  # Need at least 2 candles
         
-        # Calculate indicators
-        self._calculate_indicators(history)
+        # Calculate indicators across all timeframes
+        self._calculate_indicators()
         
         # Generate signals
         signals = self.generate_signals(candle)
@@ -135,45 +139,74 @@ class YAMLStrategy(BaseStrategy):
         
         return signals
     
-    def _calculate_indicators(self, history: List[Dict]) -> None:
+    def _calculate_indicators(self) -> None:
         """
-        Calculate all indicators from config.
+        Calculate all indicators from config across all timeframes.
         
-        Args:
-            history: Candle history
+        For each indicator, calculates it on specified timeframes (or primary if not specified).
+        Stores with naming convention: {INDICATOR}_{TIMEFRAME} (e.g., "RSI_5m", "EMA_1h")
+        
+        For backward compatibility with single-timeframe strategies, also stores without
+        suffix when only primary timeframe is used (e.g., "RSI", "EMA").
         """
-        # Convert to DataFrame for easier calculation
-        df = pd.DataFrame(history)
-        
         # Calculate each indicator
         for indicator_config in self.indicator_configs:
             name = indicator_config['name']
             params = indicator_config.get('params', {})
             
-            if name == "RSI":
-                self.indicators['RSI'] = calculate_rsi(df, params.get('period', 14))
-            elif name == "SMA":
-                self.indicators['SMA'] = calculate_sma(df, params.get('period', 20))
-            elif name == "EMA":
-                self.indicators['EMA'] = calculate_ema(df, params.get('period', 20))
-            elif name == "PRICE_PREDICTION":
-                self.indicators['PRICE_PREDICTION'] = calculate_price_prediction(
-                    df, 
-                    lookback=params.get('lookback', 10),
-                    horizon=params.get('horizon', 3)
-                )
-            elif name == "ARIMA_PREDICTION":
-                self.indicators['ARIMA_PREDICTION'] = calculate_arima_prediction(
-                    df,
-                    order=tuple(params.get('order', [1, 1, 1])),
-                    horizon=params.get('horizon', 3)
-                )
-            elif name == "RF_PREDICTION":
-                self.indicators['RF_PREDICTION'] = calculate_random_forest_prediction(
-                    df,
-                    n_estimators=params.get('n_estimators', 10),
-                    horizon=params.get('horizon', 3)
-                )
+            # Get timeframes for this indicator (default to primary only)
+            indicator_timeframes = indicator_config.get('timeframes', [self.primary_timeframe])
+            
+            # Calculate on each specified timeframe
+            for tf in indicator_timeframes:
+                history = self.history.get(tf, [])
+                
+                # Skip if insufficient data
+                min_period = params.get('period', params.get('lookback', 14))
+                if len(history) < min_period:
+                    continue
+                
+                # Convert to DataFrame
+                df = pd.DataFrame(history)
+                
+                # Calculate indicator value
+                value = None
+                
+                if name == "RSI":
+                    value = calculate_rsi(df, params.get('period', 14))
+                elif name == "SMA":
+                    value = calculate_sma(df, params.get('period', 20))
+                elif name == "EMA":
+                    value = calculate_ema(df, params.get('period', 20))
+                elif name == "PRICE_PREDICTION":
+                    value = calculate_price_prediction(
+                        df, 
+                        lookback=params.get('lookback', 10),
+                        horizon=params.get('horizon', 3)
+                    )
+                elif name == "ARIMA_PREDICTION":
+                    value = calculate_arima_prediction(
+                        df,
+                        order=tuple(params.get('order', [1, 1, 1])),
+                        horizon=params.get('horizon', 3)
+                    )
+                elif name == "RF_PREDICTION":
+                    value = calculate_random_forest_prediction(
+                        df,
+                        n_estimators=params.get('n_estimators', 10),
+                        horizon=params.get('horizon', 3)
+                    )
+                
+                # Store indicator value
+                if value is not None:
+                    # Multi-timeframe key: "RSI_5m", "EMA_1h", etc.
+                    indicator_key = f"{name}_{tf}"
+                    self.indicators[indicator_key] = value
+                    
+                    # Backward compatibility: if only primary timeframe, also store without suffix
+                    if len(indicator_timeframes) == 1 and tf == self.primary_timeframe:
+                        self.indicators[name] = value
+            
             # TODO: Add more indicators (MACD, Bollinger Bands, ATR, etc.)
     
     def _build_context(self, candle: Dict) -> Dict[str, float]:

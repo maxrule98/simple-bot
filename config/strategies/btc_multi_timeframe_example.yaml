@@ -1,0 +1,101 @@
+# Multi-Timeframe Strategy Example
+# Demonstrates how to use multiple timeframes for confirmation trading
+#
+# Strategy Logic:
+# - 1m: Fast entry timing (short-term oversold)
+# - 5m: Primary analysis (main signals)
+# - 15m: Trend filter (ensure alignment with medium-term trend)
+# - 1h: Major direction (only trade with hourly trend)
+
+strategy:
+  id: "btc-multi-tf-001"
+  name: "BTC Multi-Timeframe Confirmation"
+
+market:
+  exchange: "mexc"
+  symbol: "BTC/USDT"
+  primary_timeframe: "5m" # Main decision timeframe
+  timeframes:
+    - "1m" # Fast signals for entry timing
+    - "5m" # Primary analysis timeframe
+    - "15m" # Trend confirmation
+    - "1h" # Major trend direction
+
+# Indicators calculated on multiple timeframes
+# Use 'timeframes' key to specify which TFs to calculate on
+indicators:
+  - name: "RSI"
+    params:
+      period: 14
+    timeframes: ["1m", "5m", "15m"] # Calculate RSI on 3 timeframes
+
+  - name: "EMA"
+    params:
+      period: 20
+    timeframes: ["5m", "15m", "1h"] # Calculate EMA on 3 timeframes
+
+  - name: "SMA"
+    params:
+      period: 50
+    timeframes: ["15m", "1h"] # Long-term trend on higher TFs
+
+# Entry: Multi-timeframe confirmation (all must be true)
+entry:
+  mode: "AND"
+  conditions:
+    # Fast timing: 1m oversold
+    - "RSI_1m < 30"
+
+    # Primary signal: 5m oversold but recovering
+    - "RSI_5m < 40"
+    - "RSI_5m > RSI_1m" # 5m RSI higher than 1m (momentum shifting)
+
+    # Trend alignment: Price above medium-term trend
+    - "PRICE > EMA_15m"
+
+    # Major trend: 15m EMA above 1h EMA (bullish hierarchy)
+    - "EMA_15m > EMA_1h"
+
+    # Long-term trend: 1h price above 50 SMA
+    - "PRICE > SMA_1h"
+
+# Exit: Any condition triggers (protective)
+exit:
+  mode: "OR"
+  conditions:
+    # Overbought on primary timeframe
+    - "RSI_5m > 70"
+
+    # Lost trend support on 15m
+    - "PRICE < EMA_15m"
+
+    # Momentum weakening (5m RSI below 1m RSI)
+    - "RSI_5m < RSI_1m"
+
+    # Standard risk management
+    - "PNL_PCT < -1.0" # Stop loss
+    - "PNL_PCT > 2.5" # Take profit
+
+# Risk management
+risk:
+  position_size_pct: 2.0 # Conservative with multi-confirmation
+  stop_loss_pct: 1.0
+
+# Notes:
+# ------
+# Indicator Naming Convention: {INDICATOR}_{TIMEFRAME}
+#   - RSI_1m   = RSI calculated on 1-minute candles
+#   - RSI_5m   = RSI calculated on 5-minute candles
+#   - EMA_15m  = EMA calculated on 15-minute candles
+#   - SMA_1h   = SMA calculated on 1-hour candles
+#
+# Context Variables (always available):
+#   - PRICE      = Current close price
+#   - VOLUME     = Current volume
+#   - PNL_PCT    = Profit/Loss % (only when in position)
+#   - ENTRY_PRICE = Position entry price (only when in position)
+#
+# Backward Compatibility:
+#   If an indicator only specifies primary_timeframe (or no timeframes key),
+#   it's also stored WITHOUT the suffix for compatibility:
+#   - RSI_5m AND RSI (both point to same value)
