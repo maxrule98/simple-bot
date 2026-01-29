@@ -113,7 +113,7 @@ class WebSocketManager:
                         exchange=self.exchange_name,
                         symbol=symbol,
                         timeframe=timeframe,
-                        timestamp=timestamp // 1000,  # Convert ms to seconds
+                        timestamp=timestamp,  # CCXT provides ms, store as-is
                         open=open_price,
                         high=high,
                         low=low,
@@ -164,7 +164,7 @@ class WebSocketManager:
                     self._store_ticker(
                         exchange=self.exchange_name,
                         symbol=symbol,
-                        timestamp=int(time.time()),
+                        timestamp=int(time.time() * 1000),  # Convert seconds to ms
                         bid=bid,
                         ask=ask,
                         last=last,
@@ -212,7 +212,7 @@ class WebSocketManager:
                         exchange=self.exchange_name,
                         symbol=trade.get('symbol', symbol),
                         trade_id=trade_id,
-                        timestamp=int(trade.get('timestamp', time.time() * 1000) / 1000),
+                        timestamp=int(trade.get('timestamp', time.time() * 1000)),  # CCXT provides ms
                         side=trade.get('side', 'unknown'),
                         price=trade.get('price', 0),
                         amount=trade.get('amount', 0),
@@ -268,7 +268,7 @@ class WebSocketManager:
                 self._store_orderbook(
                     exchange=self.exchange_name,
                     symbol=symbol,
-                    timestamp=int(time.time()),
+                    timestamp=int(time.time() * 1000),  # Convert seconds to ms
                     bids=bids,
                     asks=asks,
                     bid_ask_spread=bid_ask_spread,
