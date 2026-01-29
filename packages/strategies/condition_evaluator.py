@@ -120,12 +120,14 @@ class ConditionEvaluator:
         
         results = [self.evaluate(cond) for cond in conditions]
         
-        if mode == "AND":
+        # Support both uppercase (AND/OR) and intuitive aliases (ALL/ANY)
+        mode_upper = mode.upper()
+        if mode_upper in ("AND", "ALL"):
             return all(results)
-        elif mode == "OR":
+        elif mode_upper in ("OR", "ANY"):
             return any(results)
         else:
-            raise ValueError(f"Invalid mode: {mode}")
+            raise ValueError(f"Invalid mode: {mode}. Use 'AND'/'ALL' or 'OR'/'ANY'.")
     
     def _get_value(self, var: str) -> Any:
         """

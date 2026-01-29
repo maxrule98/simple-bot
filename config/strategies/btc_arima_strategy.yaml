@@ -17,12 +17,12 @@ indicators:
       horizon: 3
 
 entry:
-  mode: "any" # Long when prediction is bullish
+  mode: "ANY" # Long when prediction is bullish
   conditions:
     - "ARIMA_PREDICTION > PRICE * 1.005" # Predict >0.5% increase
 
 exit:
-  mode: "any" # Exit when prediction turns bearish OR profit target hit
+  mode: "ANY" # Exit when prediction turns bearish OR profit target hit
   conditions:
     - "ARIMA_PREDICTION < PRICE * 0.995" # Predict >0.5% decrease
     - "PNL_PCT > 2.0" # Take profit at +2%

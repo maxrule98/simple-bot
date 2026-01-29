@@ -2,6 +2,7 @@
 strategy:
   id: "btc-4h-swing-001"
   name: "BTC Swing Trading 4h"
+  description: "Swing trading strategy on 4h timeframe using RSI and EMA"
 
 market:
   exchange: "mexc"
@@ -13,42 +14,29 @@ market:
 indicators:
   - name: "RSI"
     params:
-      period: 14# BTC/USDT on MEXC - 1 hour timeframe (momentum strategy)
-strategy:
-  id: "btc-1h-mome: strategy:
-  id: "btc-1h-momentum-001"
-  name: "BTC Momen
-   id: "bA   name: "BTC Momentum 1h"
-
-
-
-market:
-  exchange: "medit  exch    symbol: "BTC/US    primary_timeframe -  timeframes:
-    - "1h""P    - "1h"
-
-"
-
-indicatopos  - name: _p    params:
-  _l      peri.5  - name: "EMA"rs    params:
-  /s      perico
-entry:
-  mode:/et  modt_  conditionsl     - "RSI <TH    - "PRICE >  1
-exit:
-  mode: "OR (s  moin  condition
-s    - "RSI >d:    - "PRICE < -0    - "PNL_PCT < -ca    - "PNL_PCT > 3.0" e
-risk:
-  position_simbo  poET  stop_loss_pct: 2.0
-EOraEOF
-cat > /Users/mameca
-    - "15m"
-
-indicators:
-  - name: "RSI"
-    params:
-      period: 7
+      period: 14
   - name: "EMA"
     params:
-      period: 20
+      period: 50
+
+entry:
+  mode: "ALL" # All conditions must be true
+  conditions:
+    - "RSI < 35" # RSI oversold
+    - "PRICE > EMA" # Price above 50 EMA (uptrend)
+
+exit:
+  mode: "ANY" # Any condition triggers exit
+  conditions:
+    - "RSI > 70" # RSI overbought
+    - "PRICE < EMA" # Price drops below EMA
+    - "PNL_PCT > 5.0" # Take profit at +5%
+    - "PNL_PCT < -2.5" # Stop loss at -2.5%
+
+risk:
+  position_size_pct: 15 # 15% of portfolio (larger for swing trading)
+  stop_loss_pct: 2.5 # -2.5% stop loss
+  take_profit_pct: 5.0 # +5% take profit
 
 entry:
   mode: "AND"

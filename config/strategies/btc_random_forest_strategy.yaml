@@ -17,12 +17,12 @@ indicators:
       horizon: 3
 
 entry:
-  mode: "any" # Long when RF predicts bullish
+  mode: "ANY" # Long when RF predicts bullish
   conditions:
     - "RF_PREDICTION > PRICE * 1.008" # Predict >0.8% increase
 
 exit:
-  mode: "any" # Exit when RF predicts bearish OR profit target hit
+  mode: "ANY" # Exit when RF predicts bearish OR profit target hit
   conditions:
     - "RF_PREDICTION < PRICE * 0.992" # Predict >0.8% decrease
     - "PNL_PCT > 2.5" # Take profit at +2.5%

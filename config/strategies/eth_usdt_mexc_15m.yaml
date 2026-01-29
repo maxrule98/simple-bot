@@ -24,13 +24,13 @@ indicators:
       std_dev: 2
 
 entry:
-  mode: "all" # All conditions must be true
+  mode: "ALL" # All conditions must be true
   conditions:
     - "PRICE < BB_LOWER" # Price below lower Bollinger Band
     - "RSI < 30" # RSI oversold
 
 exit:
-  mode: "any" # Any condition triggers exit
+  mode: "ANY" # Any condition triggers exit
   conditions:
     - "RSI > 70" # RSI overbought
     - "PRICE > BB_UPPER" # Price above upper Bollinger Band
