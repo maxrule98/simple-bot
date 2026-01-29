@@ -207,8 +207,8 @@ class TradingRuntime:
             # Watch trades (for True VWAP calculation)
             tasks.append(self.websocket.watch_trades(symbol))
 
-            # Watch order book (optional - for orderbook signals)
-            # tasks.append(self.websocket.watch_order_book(symbol))
+            # Watch order book (for orderbook signals)
+            tasks.append(self.websocket.watch_order_book(symbol))
 
             self.logger.info(f"WebSocket streams started for {symbol}")
             self.logger.info(f"Monitoring timeframes: {timeframes}")

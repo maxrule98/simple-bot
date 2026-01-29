@@ -293,6 +293,7 @@ class WebSocketManager:
                 (exchange, symbol, timeframe, timestamp, open, high, low, close, volume)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (exchange, symbol, timeframe, timestamp, open, high, low, close, volume))
+            self.db.commit()
         except Exception as e:
             self.logger.error(f"Error storing OHLCV: {e}")
             
@@ -305,6 +306,7 @@ class WebSocketManager:
                 (exchange, symbol, timestamp, bid, ask, last, volume_24h)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (exchange, symbol, timestamp, bid, ask, last, volume_24h))
+            self.db.commit()
         except Exception as e:
             self.logger.error(f"Error storing ticker: {e}")
             
@@ -343,6 +345,7 @@ class WebSocketManager:
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (exchange, symbol, timestamp, bids_json, asks_json, 
                   bid_ask_spread, mid_price))
+            self.db.commit()
         except Exception as e:
             self.logger.error(f"Error storing order book: {e}")
             
@@ -384,6 +387,7 @@ class WebSocketManager:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (exchange, symbol, trade_id, timestamp, side, price, amount, cost,
                   taker_or_maker, fee, fee_currency))
+            self.db.commit()
         except Exception as e:
             self.logger.error(f"Error storing trade: {e}")
             

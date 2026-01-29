@@ -432,6 +432,15 @@ class DatabaseManager:
             cursor.execute(query, params)
             return cursor.fetchall()
 
+    def commit(self):
+        """
+        Commit transaction (no-op for DatabaseManager).
+        
+        Note: DatabaseManager.execute() already commits after each operation.
+        This method exists for compatibility with code expecting sqlite3.Connection interface.
+        """
+        pass
+
     def close(self):
         """Close database connections (no-op for context manager pattern)."""
         pass
