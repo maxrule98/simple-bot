@@ -1,0 +1,54 @@
+  mode: "AND"
+  conditions:
+    - "RF_PREDICTION > PRICE"
+
+exit:
+  mode: "OR"
+  conditions:
+    - "RF_PREDICTION < PRICE"
+    - "PNL_PCT < -1.5"
+    - "PNL_PCT > 3.0"
+
+risk:
+  position_size_pct: 2.5
+  stop_loss_pct: 1.5
+EOF
+cat > /Users/maxr/Projects/simple-bot/config/strategies/eth_usdt_mexc_15m.yaml << 'EOF'
+# ETH/USDT on MEXC - 15 minute timeframe (scalping strategy)
+strategy:
+  id: "eth-15m-scalp-001"
+  name: "ETH Scalping 15m"
+
+market:
+  exchange: "mexc"
+  symbol: "ETH/USDT"
+  primary_timeframe: "15m"
+  timeframes:
+    - "15m"
+
+indicators:
+  - name: "RSI"
+    params:
+      period: 7
+  - name: "EMA"
+    params:
+      period: 20
+
+entry:
+  mode: "AND"
+  conditions:
+    - "RSI < 25"
+    - "PRICE > EMA"
+
+exit:
+  mode: "OR"
+  conditions:
+    - "RSI > 75"
+    - "PRICE < EMA"
+    - "PNL_PCT < -0.4"
+    - "PNL_PCT > 0.8"
+
+risk:
+  position_size_pct: 2.5
+  stop_loss_pct: 0.4
+EOF

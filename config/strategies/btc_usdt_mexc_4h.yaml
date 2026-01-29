@@ -1,50 +1,69 @@
-# BTC/USDT on MEXC - 4 hour timeframe
-trading:
-  exchange: mexc
-  symbol: BTC/USDT
-  timeframe: 4h
-
+# BTC/USDT on MEXC - 4 hour timeframe (swing strategy)
 strategy:
-  name: BTC_Swing_4H
-  type: swing_trading
+  id: "btc-4h-swing-001"
+  name: "BTC Swing Trading 4h"
 
-  indicators:
-    - name: rsi
-      period: 14
-      overbought: 70
-      oversold: 30
+market:
+  exchange: "mexc"
+  symbol: "BTC/USDT"
+  primary_timeframe: "4h"
+  timeframes:
+    - "4h"
 
-    - name: ema
-      period: 50
+indicators:
+  - name: "RSI"
+    params:
+      period: 14# BTC/USDT on MEXC - 1 hour timeframe (momentum strategy)
+strategy:
+  id: "btc-1h-mome: strategy:
+  id: "btc-1h-momentum-001"
+  name: "BTC Momen
+   id: "bA   name: "BTC Momentum 1h"
 
-    - name: ema
-      period: 200
 
-    - name: macd
-      fast: 12
-      slow: 26
-      signal: 9
 
-  entry:
-    long:
-      - rsi < 40
-      - ema_50 > ema_200
-      - macd_cross_up
-    short:
-      - rsi > 60
-      - ema_50 < ema_200
-      - macd_cross_down
+market:
+  exchange: "medit  exch    symbol: "BTC/US    primary_timeframe -  timeframes:
+    - "1h""P    - "1h"
 
-  exit:
-    take_profit: 5.0
-    stop_loss: 2.5
-    trailing_stop: true
+"
+
+indicatopos  - name: _p    params:
+  _l      peri.5  - name: "EMA"rs    params:
+  /s      perico
+entry:
+  mode:/et  modt_  conditionsl     - "RSI <TH    - "PRICE >  1
+exit:
+  mode: "OR (s  moin  condition
+s    - "RSI >d:    - "PRICE < -0    - "PNL_PCT < -ca    - "PNL_PCT > 3.0" e
+risk:
+  position_simbo  poET  stop_loss_pct: 2.0
+EOraEOF
+cat > /Users/mameca
+    - "15m"
+
+indicators:
+  - name: "RSI"
+    params:
+      period: 7
+  - name: "EMA"
+    params:
+      period: 20
+
+entry:
+  mode: "AND"
+  conditions:
+    - "RSI < 25"
+    - "PRICE > EMA"
+
+exit:
+  mode: "OR"
+  conditions:
+    - "RSI > 75"
+    - "PRICE < EMA"
+    - "PNL_PCT < -0.4"
+    - "PNL_PCT > 0.8"
 
 risk:
-  position_size: 1000
-  max_open_positions: 1
-  max_daily_loss: 2000
-
-execution:
-  order_type: limit
-  slippage_tolerance: 0.15
+  position_size_pct: 2.5
+  stop_loss_pct: 0.4

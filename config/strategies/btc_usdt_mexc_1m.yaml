@@ -1,49 +1,37 @@
-# BTC/USDT on MEXC - 1 minute timeframe (high-frequency scalping)
-trading:
-  exchange: mexc
-  symbol: BTC/USDT
-  timeframe: 1m
-
+# BTC/USDT on MEXC - 1 minute timeframe (simple RSI strategy)
 strategy:
-  name: BTC_HF_Scalp_1M
-  type: high_frequency_scalping
+  id: "btc-1m-rsi-001"
+  name: "BTC RSI Scalping 1m"
 
-  indicators:
-    - name: rsi
-      period: 5
-      overbought: 80
-      oversold: 20
+market:
+  exchange: "mexc"
+  symbol: "BTC/USDT"
+  primary_timeframe: "1m"
+  timeframes:
+    - "1m"
 
-    - name: ema
-      period: 9
+indicators:
+  - name: "RSI"
+    params:
+      period: 14
+  - name: "EMA"
+    params:
+      period: 20
 
-    - name: ema
-      period: 21
+entry:
+  mode: "AND"
+  conditions:
+    - "RSI < 30"
+    - "PRICE > EMA"
 
-    - name: bollinger_bands
-      period: 10
-      std_dev: 2
-
-  entry:
-    long:
-      - price < bb_lower
-      - rsi < 25
-      - price > ema_9
-    short:
-      - price > bb_upper
-      - rsi > 75
-      - price < ema_9
-
-  exit:
-    take_profit: 0.3 # Very tight targets for 1m scalping
-    stop_loss: 0.2
-    trailing_stop: true
+exit:
+  mode: "OR"
+  conditions:
+    - "RSI > 70"
+    - "PRICE < EMA"
+    - "PNL_PCT < -0.5"
+    - "PNL_PCT > 1.0"
 
 risk:
-  position_size: 200
-  max_open_positions: 3
-  max_daily_loss: 500
-
-execution:
-  order_type: limit
-  slippage_tolerance: 0.03
+  position_size_pct: 2.0
+  stop_loss_pct: 0.5

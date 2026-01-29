@@ -1,44 +1,43 @@
 # ETH/USDT on MEXC - 15 minute timeframe (scalping)
-trading:
-  exchange: mexc
-  symbol: ETH/USDT
-  timeframe: 15m
-
 strategy:
-  name: ETH_Scalping_15M
-  type: scalping
+  id: "eth-mexc-15m-001"
+  name: "ETH_Scalping_15M"
+  description: "ETH scalping on MEXC using RSI, EMA, and Bollinger Bands"
 
-  indicators:
-    - name: rsi
+market:
+  exchange: "mexc"
+  symbol: "ETH/USDT"
+  primary_timeframe: "15m"
+  timeframes:
+    - "15m"
+
+indicators:
+  - name: "RSI"
+    params:
       period: 7
-      overbought: 75
-      oversold: 25
-
-    - name: ema
+  - name: "EMA"
+    params:
       period: 20
-
-    - name: bollinger_bands
+  - name: "BB"
+    params:
       period: 20
       std_dev: 2
 
-  entry:
-    long:
-      - price < bb_lower
-      - rsi < 30
-    short:
-      - price > bb_upper
-      - rsi > 70
+entry:
+  mode: "all" # All conditions must be true
+  conditions:
+    - "PRICE < BB_LOWER" # Price below lower Bollinger Band
+    - "RSI < 30" # RSI oversold
 
-  exit:
-    take_profit: 0.8 # Smaller targets for scalping
-    stop_loss: 0.4
-    trailing_stop: true
+exit:
+  mode: "any" # Any condition triggers exit
+  conditions:
+    - "RSI > 70" # RSI overbought
+    - "PRICE > BB_UPPER" # Price above upper Bollinger Band
+    - "PNL_PCT > 0.8" # Take profit
+    - "PNL_PCT < -0.4" # Stop loss
 
 risk:
-  position_size: 300
-  max_open_positions: 2
-  max_daily_loss: 600
-
-execution:
-  order_type: limit
-  slippage_tolerance: 0.05
+  position_size_pct: 10 # 10% of portfolio
+  stop_loss_pct: 0.4 # -0.4% stop loss (tight for scalping)
+  take_profit_pct: 0.8 # +0.8% take profit (small target for scalping)

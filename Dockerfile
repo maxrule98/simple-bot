@@ -29,6 +29,8 @@ COPY --from=builder /app/.venv /app/.venv
 COPY apps/ ./apps/
 COPY packages/ ./packages/
 COPY config/ ./config/
+COPY schema.py ./schema.py
+COPY pyproject.toml README.md ./
 
 # Create directories for data and logs
 RUN mkdir -p /app/data /app/logs
