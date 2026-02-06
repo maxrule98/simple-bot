@@ -1,6 +1,7 @@
 services:
   - type: web
     name: grafana
+    project: tea-d6373q6r433s73cpbhmg
     env: docker
     dockerfilePath: infra/render/grafana/Dockerfile
     plan: free
@@ -9,6 +10,7 @@ services:
 
   - type: web
     name: prometheus
+    project: tea-d6373q6r433s73cpbhmg
     env: docker
     dockerfilePath: infra/render/prometheus/Dockerfile
     plan: free
@@ -17,6 +19,7 @@ services:
 
   - type: web
     name: pushgateway
+    project: tea-d6373q6r433s73cpbhmg
     env: docker
     dockerfilePath: infra/render/pushgateway/Dockerfile
     plan: free
@@ -24,6 +27,7 @@ services:
   # Example trader service entry (duplicate and adjust for each strategy)
   - type: web
     name: trader-btc-usdt-mexc-1m
+    project: tea-d6373q6r433s73cpbhmg
     env: docker
     dockerfilePath: Dockerfile
     plan: free
