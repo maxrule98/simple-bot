@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: grafana
+    env: docker
+    dockerfilePath: infra/render/grafana/Dockerfile
+    plan: free
+    disk:
+      sizeGB: 1
+
+  - type: web
+    name: prometheus
+    env: docker
+    dockerfilePath: infra/render/prometheus/Dockerfile
+    plan: free
+    disk:
+      sizeGB: 2
+
+  - type: web
+    name: pushgateway
+    env: docker
+    dockerfilePath: infra/render/pushgateway/Dockerfile
+    plan: free
+
+  # Example trader service entry (duplicate and adjust for each strategy)
+  - type: web
+    name: trader-btc-usdt-mexc-1m
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    disk:
+      sizeGB: 1
+    envVars:
+      - key: STRATEGY_CONFIG
+        value: config/strategies/btc_usdt_mexc_1m.yaml
+      - key: STRATEGY_ID
+        value: btc-usdt-mexc-1m
+      - key: DATABASE_PATH
+        value: /data/trading.db
+      - key: EXCHANGE
+        value: mexc
+    healthCheckPath: /health
