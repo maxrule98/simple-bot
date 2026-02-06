@@ -1,0 +1,20 @@
+# Prometheus configuration for trading bot monitoring
+
+global:
+  scrape_interval: 1s # Scrape metrics every second for real-time feel
+  evaluation_interval: 5s # Evaluate rules every 5 seconds
+  external_labels:
+    monitor: "trading-bot"
+
+# Scrape configurations
+scrape_configs:
+  # Scrape Pushgateway (where trading bots push metrics)
+  - job_name: "pushgateway"
+    honor_labels: true
+    static_configs:
+      - targets: ["pushgateway:9091"]
+
+  # Scrape Prometheus itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

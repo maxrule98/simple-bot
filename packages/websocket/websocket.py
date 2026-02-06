@@ -29,8 +29,10 @@ import json
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import time
+import os
 
 from packages.logging.logger import setup_logger
+from packages.metrics import PrometheusMetrics
 
 # Get project root (2 levels up from this file)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -67,6 +69,11 @@ class WebSocketManager:
         self.running = False
         self.candle_callback = None  # Optional callback for candle updates
         self.logger = setup_logger(f"websocket.{exchange_name}")
+        
+        # Initialize Prometheus metrics
+        self.metrics = PrometheusMetrics(exchange=exchange_name)
+        self.last_push = time.time()
+        self.push_interval = float(os.getenv('METRICS_PUSH_INTERVAL', '2.0'))  # seconds
         
     async def connect(self):
         """Establish websocket connection to exchange."""
@@ -170,6 +177,9 @@ class WebSocketManager:
                         last=last,
                         volume_24h=volume_24h
                     )
+                    
+                    # Push metrics periodically
+                    await self._maybe_push_metrics()
                 
             except Exception as e:
                 print(f"❌ Error watching ticker {symbol}: {e}")
@@ -221,6 +231,9 @@ class WebSocketManager:
                         fee=trade.get('fee', {}).get('cost') if trade.get('fee') else None,
                         fee_currency=trade.get('fee', {}).get('currency') if trade.get('fee') else None
                     )
+                    
+                    # Push metrics periodically
+                    await self._maybe_push_metrics()
                     
             except Exception as e:
                 print(f"❌ Error watching trades {symbol}: {e}")
@@ -275,6 +288,9 @@ class WebSocketManager:
                     mid_price=mid_price
                 )
                 
+                # Push metrics periodically
+                await self._maybe_push_metrics()
+                
             except Exception as e:
                 print(f"❌ Error watching order book {symbol}: {e}")
                 await asyncio.sleep(5)
@@ -294,6 +310,18 @@ class WebSocketManager:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (exchange, symbol, timeframe, timestamp, open, high, low, close, volume))
             self.db.commit()
+            
+            # Update Prometheus metrics
+            self.metrics.update_candle(
+                symbol=symbol,
+                timeframe=timeframe,
+                open_=open,
+                high=high,
+                low=low,
+                close=close,
+                volume=volume
+            )
+            
         except Exception as e:
             self.logger.error(f"Error storing OHLCV: {e}")
             
@@ -307,6 +335,15 @@ class WebSocketManager:
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (exchange, symbol, timestamp, bid, ask, last, volume_24h))
             self.db.commit()
+            
+            # Update Prometheus metrics
+            self.metrics.update_price(
+                symbol=symbol,
+                last=last,
+                bid=bid,
+                ask=ask
+            )
+            
         except Exception as e:
             self.logger.error(f"Error storing ticker: {e}")
             
@@ -337,6 +374,15 @@ class WebSocketManager:
         try:
             # Convert bids/asks to JSON
             bids_json = json.dumps(bids)
+            
+            # Update Prometheus metrics
+            self.metrics.update_orderbook(
+                symbol=symbol,
+                bids=bids,
+                asks=asks,
+                depth=min(10, len(bids), len(asks))
+            )
+            
             asks_json = json.dumps(asks)
             
             self.db.execute("""
@@ -388,8 +434,24 @@ class WebSocketManager:
             """, (exchange, symbol, trade_id, timestamp, side, price, amount, cost,
                   taker_or_maker, fee, fee_currency))
             self.db.commit()
+            
+            # Update Prometheus metrics
+            self.metrics.record_trade(
+                symbol=symbol,
+                side=side,
+                amount=amount,
+                price=price
+            )
+            
         except Exception as e:
             self.logger.error(f"Error storing trade: {e}")
+    
+    async def _maybe_push_metrics(self):
+        """Push metrics to Pushgateway if interval elapsed."""
+        now = time.time()
+        if now - self.last_push >= self.push_interval:
+            self.metrics.push()
+            self.last_push = now
             
     async def start(self, enable_orderbook: bool = True, enable_trades: bool = False):
         """
